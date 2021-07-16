@@ -104,7 +104,17 @@ class ApiClient(object):
             collection = self.get(resource, payload=payload)
             if collection:
                 elements += list(collection)
-                if collection.total < collection.offset * collection.pagesize:
+
+                # some collections do not deliver pagesize and offset
+                effective_pagesize = page_size
+                if collection.pagesize is not None:
+                    effective_pagesize = collection.pagesize
+
+                effective_offset = offset
+                if collection.offset is not None:
+                    effective_offset = collection.offset
+
+                if collection.total < effective_offset * effective_pagesize:
                     break
                 offset += 1
             else:
@@ -156,7 +166,7 @@ class ApiClient(object):
 
         :return: dict of all project with id as key
         """
-        projects = self.get('projects')
+        projects = self.get_paged_collection('projects', page_size=100)
         project_map = {}
         for p in projects:
             project_map[p.id] = p
@@ -181,7 +191,7 @@ class ApiClient(object):
     def get_workpackages(self):
         raise NotImplemented
 
-    def get_workpackages_by_project_id(self, project_id: int, status: str = None, status_ids: List[int] = None) -> List[res.WorkPackage]:
+    def get_workpackages_by_project_id(self, project_id: int, status: str = None, status_ids: List[int] = None, page_size=100) -> List[res.WorkPackage]:
         """
         fetched workpackages for a specific projects
 
@@ -213,7 +223,7 @@ class ApiClient(object):
         if len(filters):
             payload.update({'filters': json.dumps(filters)})
 
-        return self.get_paged_collection(f"projects/{project_id}/work_packages", page_size=100, payload=payload)
+        return self.get_paged_collection(f"projects/{project_id}/work_packages", page_size=page_size, payload=payload)
 
     def get_workpackages_by_query_id(self, query_id: int) -> List[res.WorkPackage]:
         workpackages = []
@@ -241,7 +251,7 @@ class ApiClient(object):
         return self.get(f"relations/{relation_id}")
 
     def get_relations(self) -> List[res.Relation]:
-        result = self.get(f"relations")
+        result = self.get_paged_collection(f"relations", page_size=500)
         if result:
             return (list(result))
 
@@ -251,7 +261,7 @@ class ApiClient(object):
         return self.get(f"versions/{version_id}")
 
     def get_versions(self) -> List[res.Version]:
-        result = self.get(f"versions")
+        result = self.get_paged_collection(f"versions", page_size=100)
 
         if result:
             return (list(result))
@@ -262,7 +272,7 @@ class ApiClient(object):
         return self.get(f"users/{user_id}")
 
     def get_users(self) -> List[res.User]:
-        result = self.get(f"users")
+        result = self.get_paged_collection(f"users", page_size=100)
 
         if result:
             return (list(result))
@@ -273,7 +283,7 @@ class ApiClient(object):
         return self.get(f"placeholder_users/{user_id}")
 
     def get_placeholder_users(self) -> List[res.PlaceholderUser]:
-        result = self.get(f"placeholder_users")
+        result = self.get_paged_collection(f"placeholder_users", page_size=100)
 
         if result:
             return (list(result))
@@ -284,7 +294,7 @@ class ApiClient(object):
         return self.get(f"memberships/{id}")
 
     def get_project_members(self) -> List[res.Membership]:
-        result = self.get(f"memberships")
+        result = self.get_paged_collection(f"memberships", page_size=100)
 
         if result:
             return (list(result))
@@ -295,7 +305,7 @@ class ApiClient(object):
         return self.get(f"statuses/{id}")
 
     def get_statuses(self) -> List[res.Status]:
-        result = self.get(f"statuses")
+        result = self.get_paged_collection(f"statuses", page_size=100)
 
         if result:
             return (list(result))
@@ -306,7 +316,7 @@ class ApiClient(object):
         return self.get(f"versions/{id}")
 
     def get_versions(self) -> List[res.Version]:
-        result = self.get(f"versions")
+        result = self.get_paged_collection(f"versions", page_size=100)
 
         if result:
             return (list(result))
