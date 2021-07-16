@@ -68,7 +68,10 @@ class ApiClient(object):
             # attach parameters to the url, like `&foo=bar`
             params=payload,
             # tell the API we expect to parse JSON responses
-            headers={'Accept': 'application/json;charset=UTF-8'},
+            headers={
+                'Accept': 'application/json;charset=UTF-8',
+                'accept-encoding': 'identity, gzip',
+            },
             auth=self.auth
         )
 
