@@ -98,7 +98,7 @@ class Project(GenericType):
         self.level = 1
         self.fullname = ''
 
-        super().__init__(json_object, datetime_fields=['createdAt', 'updatedAt'])
+        super().__init__(json_object, datetime_fields=['createdat', 'updatedat'])
 
         # check for parentId
         if '_embedded' in json_object:
@@ -274,7 +274,7 @@ class WorkPackage(GenericType):
             # inbound relation
             if r.to_id == self.id:
                 # create if node of type does not exists
-                if r.type not in self.relations_in:
+                if r.reversetype not in self.relations_in:
                     self.relations_in[r.reversetype] = []
 
                 self.relations_in[r.reversetype].append(r.from_id)

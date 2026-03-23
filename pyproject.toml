@@ -14,5 +14,8 @@ dependencies = ["requests>=2.25.1"]
 [project.scripts]
 openproject-cli = "openproject_api_client.cli:main"
 
+[project.optional-dependencies]
+test = ["pytest>=7.0", "responses>=0.23"]
+
 [project.urls]
 Repository = "https://github.com/MHx-Operations/openproject-api-client"
