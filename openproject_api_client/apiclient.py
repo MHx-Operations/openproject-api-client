@@ -9,6 +9,8 @@ from requests.auth import HTTPBasicAuth
 
 import openproject_api_client.resources as res
 
+__all__ = ["ApiClient", "ApiError", "RequestError"]
+
 logger = logging.getLogger(__name__)
 
 

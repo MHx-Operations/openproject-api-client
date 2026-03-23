@@ -4,6 +4,12 @@ from typing import List
 
 from openproject_api_client import apiclient
 
+__all__ = [
+    "GenericType", "Project", "WorkPackage", "Relation", "Version",
+    "User", "PlaceholderUser", "Membership", "Status", "Grid",
+    "GridWidget", "Query", "Collection", "WorkPackageCollection",
+]
+
 
 class GenericType:
     def __init__(self, json_object=None, datetime_fields=None, date_fields=None, debug=False):
