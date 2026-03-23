@@ -128,7 +128,7 @@ class ApiClient(object):
             # try to decode json object depending on type
             return ApiClient.decode(response.json())
 
-        except:
+        except (ValueError, KeyError):
             # return as SimpleNamespace object if no type info found
             return json.loads(response.text, object_hook=lambda d: SimpleNamespace(**d))
 
@@ -147,7 +147,7 @@ class ApiClient(object):
                 # class not found, using generic class
                 return res.GenericType(json_object, debug=True)
 
-        raise ApiError
+        raise ApiError(f"No '_type' key in API response, keys: {list(json_object.keys())}")
 
     # methods for specific/convenient access to endpoints
     # ###################################################
@@ -307,7 +307,7 @@ class ApiClient(object):
 
         return None
 
-    def get_placeholder_users(self, user_id: int) -> res.PlaceholderUser:
+    def get_placeholder_user(self, user_id: int) -> res.PlaceholderUser:
         return self.get(f"placeholder_users/{user_id}")
 
     def get_placeholder_users(self) -> List[res.PlaceholderUser]:
@@ -334,17 +334,6 @@ class ApiClient(object):
 
     def get_statuses(self) -> List[res.Status]:
         result = self.get_paged_collection(f"statuses", page_size=100)
-
-        if result:
-            return (list(result))
-
-        return None
-
-    def get_version(self, id: int) -> res.Version:
-        return self.get(f"versions/{id}")
-
-    def get_versions(self) -> List[res.Version]:
-        result = self.get_paged_collection(f"versions", page_size=100)
 
         if result:
             return (list(result))

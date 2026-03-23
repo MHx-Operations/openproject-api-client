@@ -95,7 +95,7 @@ class Project(GenericType):
                     if json_object['_links']['parent']['href'] != "urn:openproject-org:api:v3:undisclosed":
                         try:
                             self.parent_id = int(json_object['_links']['parent']['href'].split("/")[-1])
-                        except:
+                        except (ValueError, TypeError):
                             # ok if unparseable
                             pass
 
@@ -412,7 +412,7 @@ class Membership(GenericType):
 
 
     def __str__(self):
-        return f"Membership({self.id}): {self.name}"
+        return f"Membership({self.id}): {self.principal} in {self.project}"
 
 class Status(GenericType):
     def __init__(self, json_object=None):
@@ -430,23 +430,6 @@ class Status(GenericType):
                          date_fields=[])
     def __str__(self):
         return f"Status({self.id}): {self.name}"
-
-class Version(GenericType):
-    def __init__(self, json_object=None):
-        self.id = None
-
-        self.name = None
-        self.startdate = None
-        self.enddate = None
-        self.status = None
-
-        self.createdAt = None
-        self.updatedat = None
-
-        super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'],
-                         date_fields=[])
-    def __str__(self):
-        return f"Version({self.id}): {self.name}"
 
 class Grid(GenericType):
     def __init__(self, json_object=None):
@@ -542,7 +525,7 @@ class Query(GenericType):
             if 'results' in json_object['_embedded']:
                 try:
                     self.results = apiclient.ApiClient.decode(json_object['_embedded']['results'])
-                except:
+                except (AttributeError, KeyError, apiclient.ApiError):
                     self.results = json_object['_embedded']['results']
 
 
