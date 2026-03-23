@@ -339,7 +339,7 @@ class User(GenericType):
         self.lastname = None
         self.name = None
         self.email = None
-        self.createdAt = None
+        self.createdat = None
         self.updatedat = None
 
         super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'],
@@ -352,7 +352,7 @@ class PlaceholderUser(GenericType):
     def __init__(self, json_object=None):
         self.id = None
         self.name = None
-        self.createdAt = None
+        self.createdat = None
         self.updatedat = None
 
         super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'],
@@ -372,7 +372,7 @@ class Membership(GenericType):
         self.principal_id = None
         self.principal_type = None
 
-        self.createdAt = None
+        self.createdat = None
         self.updatedat = None
 
         super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'],
@@ -402,7 +402,7 @@ class Status(GenericType):
         self.isclosed = None
         self.position = None
 
-        self.createdAt = None
+        self.createdat = None
         self.updatedat = None
 
         super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'],

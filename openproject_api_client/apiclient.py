@@ -1,4 +1,5 @@
 import json
+import logging
 import sys
 from types import SimpleNamespace
 from typing import List
@@ -8,12 +9,10 @@ from requests.auth import HTTPBasicAuth
 
 import openproject_api_client.resources as res
 
+logger = logging.getLogger(__name__)
 
-# https://docs.openproject.org/api/
 
-# https://community.openproject.com/topics/7941
-
-class ApiClient(object):
+class ApiClient:
 
     def __init__(self, base_url, apikey):
 
@@ -36,7 +35,7 @@ class ApiClient(object):
         # Avoid dangerous default function argument `{}`
         payload = payload or {}
         # versioning an API guarantees compatibility
-        endpoint = '{}{}/{}'.format(self.base_url, self._rootpath, resource)
+        endpoint = f"{self.base_url}{self._rootpath}/{resource}"
         return requests.get(
             endpoint,
             # attach parameters to the url, like `&foo=bar`
@@ -116,7 +115,7 @@ class ApiClient(object):
                 return obj
 
             except AttributeError as e:
-                print(f"*warn* unable to instantiate class for type {json_object['_type']}, error was: {e}")
+                logger.warning("Unable to instantiate class for type %s: %s", json_object['_type'], e)
                 # class not found, using generic class
                 return res.GenericType(json_object, debug=True)
 
@@ -218,8 +217,6 @@ class ApiClient(object):
             if status_ids is not None:
                 filters.append({"status_id": {"operator": "=", "values": status_ids}})
 
-        # filters.append({"subProject": {"operator": "=", "values": "none"}})
-
         payload = {}
         if len(filters):
             payload.update({'filters': json.dumps(filters)})
@@ -252,66 +249,66 @@ class ApiClient(object):
         return self.get(f"relations/{relation_id}")
 
     def get_relations(self) -> List[res.Relation]:
-        result = self.get_paged_collection(f"relations", page_size=500)
+        result = self.get_paged_collection("relations", page_size=500)
         if result:
-            return (list(result))
+            return list(result)
 
-        return None
+        return []
 
     def get_version(self, version_id: int) -> res.Version:
         return self.get(f"versions/{version_id}")
 
     def get_versions(self) -> List[res.Version]:
-        result = self.get_paged_collection(f"versions", page_size=100)
+        result = self.get_paged_collection("versions", page_size=100)
 
         if result:
-            return (list(result))
+            return list(result)
 
-        return None
+        return []
 
     def get_user(self, user_id: int) -> res.User:
         return self.get(f"users/{user_id}")
 
     def get_users(self) -> List[res.User]:
-        result = self.get_paged_collection(f"users", page_size=100)
+        result = self.get_paged_collection("users", page_size=100)
 
         if result:
-            return (list(result))
+            return list(result)
 
-        return None
+        return []
 
     def get_placeholder_user(self, user_id: int) -> res.PlaceholderUser:
         return self.get(f"placeholder_users/{user_id}")
 
     def get_placeholder_users(self) -> List[res.PlaceholderUser]:
-        result = self.get_paged_collection(f"placeholder_users", page_size=100)
+        result = self.get_paged_collection("placeholder_users", page_size=100)
 
         if result:
-            return (list(result))
+            return list(result)
 
-        return None
+        return []
 
-    def get_project_member(self, id: int) -> res.Membership:
-        return self.get(f"memberships/{id}")
+    def get_project_member(self, member_id: int) -> res.Membership:
+        return self.get(f"memberships/{member_id}")
 
     def get_project_members(self) -> List[res.Membership]:
-        result = self.get_paged_collection(f"memberships", page_size=100)
+        result = self.get_paged_collection("memberships", page_size=100)
 
         if result:
-            return (list(result))
+            return list(result)
 
-        return None
+        return []
 
-    def get_status(self, id: int) -> res.Status:
-        return self.get(f"statuses/{id}")
+    def get_status(self, status_id: int) -> res.Status:
+        return self.get(f"statuses/{status_id}")
 
     def get_statuses(self) -> List[res.Status]:
-        result = self.get_paged_collection(f"statuses", page_size=100)
+        result = self.get_paged_collection("statuses", page_size=100)
 
         if result:
-            return (list(result))
+            return list(result)
 
-        return None
+        return []
 
     def get_grid(self, grid_id: int) -> res.Grid:
         return self.get(f"grids/{grid_id}")
@@ -326,7 +323,7 @@ class ApiClient(object):
         if len(filters):
             payload.update({'filters': json.dumps(filters)})
 
-        return self.get_paged_collection(f"grids", page_size=100, payload=payload)
+        return self.get_paged_collection("grids", page_size=100, payload=payload)
 
     def get_query(self, query_id: int) -> res.Query:
         # we do not need any elements in here, use get_workpackages_by_query_id functions
