@@ -188,8 +188,36 @@ class ApiClient(object):
     def get_workpackage(self, workpackage_id: int) -> res.WorkPackage:
         return self.get(f"work_packages/{workpackage_id}")
 
-    def get_workpackages(self):
-        raise NotImplemented
+    def get_workpackages(self, status: str = None, status_ids: List[int] = None, page_size=100) -> List[res.WorkPackage]:
+        """
+        get all workpackages across all projects
+
+        :param status: one of 'all', 'open' (default), 'closed' ; overrides status_ids
+        :type status: str
+        :param status_ids: list of status ids used to filter ; when using status must not be set
+        :type status_ids: int
+        :param page_size: number of items per page
+        :type page_size: int
+        :return: returns list of all workpackages matching the filter
+        :rtype: List[WorkPackage]
+        """
+        filters = []
+        if status is not None:
+            if status.lower() == 'all':
+                filters.append({"status_id": {"operator": "*", "values": None}})
+            elif status.lower() == 'closed':
+                filters.append({"status_id": {"operator": "c", "values": None}})
+            elif status.lower() == 'open':
+                filters.append({"status_id": {"operator": "o", "values": None}})
+        else:
+            if status_ids is not None:
+                filters.append({"status_id": {"operator": "=", "values": status_ids}})
+
+        payload = {}
+        if len(filters):
+            payload.update({'filters': json.dumps(filters)})
+
+        return self.get_paged_collection('work_packages', page_size=page_size, payload=payload)
 
     def get_workpackages_by_project_id(self, project_id: int, status: str = None, status_ids: List[int] = None, page_size=100) -> List[res.WorkPackage]:
         """
