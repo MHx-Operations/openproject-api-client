@@ -6,7 +6,6 @@ from typing import List
 import requests
 from requests.auth import HTTPBasicAuth
 
-# import types
 import openproject_api_client.resources as res
 
 
@@ -32,31 +31,6 @@ class ApiClient(object):
         if not self.base_url.endswith('/'):
             self.base_url += '/'
 
-    # decorating function for error handling
-    # def safe_request(fct):
-    #     """ Return Go-like data (i.e. actual response and possible error) instead of raising errors. """
-    #     def inner(*args, **kwargs):
-    #         data, error = {}
-    #
-    #         try:
-    #             res = fct(*args, **kwargs)
-    #         except requests.exceptions.ConnectionError as error:
-    #             return None, {'message': str(error), 'id': -1}
-    #
-    #         if res.status_code == 200 and res.headers['content-type'] == 'application/json':
-    #             # expected behavior
-    #             data = res.json()
-    #         elif res.status_code == 206 and res.headers['content-type'] == 'application/json':
-    #             # partial response, return as-is
-    #             data = res.json()
-    #         else:
-    #             # something went wrong
-    #             error = {'id': res.status_code, 'message': res.reason}
-    #
-    #         return res, error
-    #     return inner
-
-    # @safe_request
     def http_get(self, resource, payload=None):
         """ Perform an HTTP GET request against the given endpoint. """
         # Avoid dangerous default function argument `{}`
@@ -86,7 +60,6 @@ class ApiClient(object):
 
         response = self.http_get(resource, payload)
 
-        # if response.status_code == 200 and response.headers['content-type'] == 'application/json':
         if response:
             return self.decode_response(response)
         else:

@@ -327,19 +327,9 @@ class Version(GenericType):
         super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'],
                          date_fields=['enddate', 'startdate'])
 
-        # if '_links' in json_object:
-        #     if 'from' in json_object['_links']:
-        #         if json_object['_links']['from']['href']:
-        #             self.from_id = int(json_object['_links']['from']['href'].split("/")[-1])
-        #             self.from_title = json_object['_links']['from']['title']
-        #
-        #     if 'to' in json_object['_links']:
-        #         if json_object['_links']['to']['href']:
-        #             self.to_id = int(json_object['_links']['to']['href'].split("/")[-1])
-        #             self.to_title = json_object['_links']['to']['title']
-
     def __str__(self):
         return f"Version({self.id}): {self.name}"
+
 
 class User(GenericType):
     def __init__(self, json_object=None):
@@ -354,17 +344,6 @@ class User(GenericType):
 
         super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'],
                          date_fields=['enddate', 'startdate'])
-
-        # if '_links' in json_object:
-        #     if 'from' in json_object['_links']:
-        #         if json_object['_links']['from']['href']:
-        #             self.from_id = int(json_object['_links']['from']['href'].split("/")[-1])
-        #             self.from_title = json_object['_links']['from']['title']
-        #
-        #     if 'to' in json_object['_links']:
-        #         if json_object['_links']['to']['href']:
-        #             self.to_id = int(json_object['_links']['to']['href'].split("/")[-1])
-        #             self.to_title = json_object['_links']['to']['title']
 
     def __str__(self):
         return f"User({self.id}): {self.name}"

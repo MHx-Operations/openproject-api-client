@@ -125,29 +125,3 @@ if grid:
 
     except:
         print ("some error fetching grid widget")
-
-
-
-# trying raw get access
-# #################################################################
-if False:
-    # access a single project
-    p = client.get('projects/14')
-    print(p)
-
-    p = client.get('projects')
-    print(p)
-
-    # workpackage
-    w = client.get('work_packages/362')
-    print(w)
-
-    # some debug sandbox
-    tmp = client.get_query(20)
-    tmp = client.get_workpackages_by_query_id(20)
-    tmp = client.get_workpackages_by_query_id(12)
-
-    tmp = client.get('projects/46/work_packages')
-    tmp = client.get('grids')
-    tmp = client.get('queries')
-    tmp = client.get('queries/112')
