@@ -1,3 +1,10 @@
+"""Client for the OpenProject API v3.
+
+Provides a simple interface to read data from any OpenProject instance
+(version 10 and later). Handles pagination, JSON decoding, and maps
+API responses to typed Python objects.
+"""
+
 import json
 import logging
 import sys
@@ -15,6 +22,14 @@ logger = logging.getLogger(__name__)
 
 
 class ApiClient:
+    """Client for the OpenProject API v3.
+
+    Usage::
+
+        client = ApiClient("https://openproject.example.com/", "your-api-key")
+        projects = client.get_projects()
+        work_packages = client.get_workpackages(status='open')
+    """
 
     def __init__(self, base_url, apikey):
 
@@ -160,6 +175,7 @@ class ApiClient:
         return project_map
 
     def get_workpackage(self, workpackage_id: int) -> res.WorkPackage:
+        """Fetch a single work package by ID."""
         return self.get(f"work_packages/{workpackage_id}")
 
     def get_workpackages(self, status: str = None, status_ids: List[int] = None, page_size=100) -> List[res.WorkPackage]:
@@ -226,6 +242,7 @@ class ApiClient:
         return self.get_paged_collection(f"projects/{project_id}/work_packages", page_size=page_size, payload=payload)
 
     def get_workpackages_by_query_id(self, query_id: int) -> List[res.WorkPackage]:
+        """Fetch all work packages returned by a saved query."""
         workpackages = []
         page_size = 10
         payload={'pageSize': page_size}
@@ -248,9 +265,11 @@ class ApiClient:
         return workpackages
 
     def get_relation(self, relation_id: int) -> res.Relation:
+        """Fetch a single relation by ID."""
         return self.get(f"relations/{relation_id}")
 
     def get_relations(self) -> List[res.Relation]:
+        """Fetch all work package relations."""
         result = self.get_paged_collection("relations", page_size=500)
         if result:
             return list(result)
@@ -258,9 +277,11 @@ class ApiClient:
         return []
 
     def get_version(self, version_id: int) -> res.Version:
+        """Fetch a single version (milestone) by ID."""
         return self.get(f"versions/{version_id}")
 
     def get_versions(self) -> List[res.Version]:
+        """Fetch all versions across all projects."""
         result = self.get_paged_collection("versions", page_size=100)
 
         if result:
@@ -269,9 +290,11 @@ class ApiClient:
         return []
 
     def get_user(self, user_id: int) -> res.User:
+        """Fetch a single user by ID."""
         return self.get(f"users/{user_id}")
 
     def get_users(self) -> List[res.User]:
+        """Fetch all users."""
         result = self.get_paged_collection("users", page_size=100)
 
         if result:
@@ -280,9 +303,11 @@ class ApiClient:
         return []
 
     def get_placeholder_user(self, user_id: int) -> res.PlaceholderUser:
+        """Fetch a single placeholder user by ID."""
         return self.get(f"placeholder_users/{user_id}")
 
     def get_placeholder_users(self) -> List[res.PlaceholderUser]:
+        """Fetch all placeholder users."""
         result = self.get_paged_collection("placeholder_users", page_size=100)
 
         if result:
@@ -291,9 +316,11 @@ class ApiClient:
         return []
 
     def get_project_member(self, member_id: int) -> res.Membership:
+        """Fetch a single project membership by ID."""
         return self.get(f"memberships/{member_id}")
 
     def get_project_members(self) -> List[res.Membership]:
+        """Fetch all project memberships."""
         result = self.get_paged_collection("memberships", page_size=100)
 
         if result:
@@ -302,9 +329,11 @@ class ApiClient:
         return []
 
     def get_status(self, status_id: int) -> res.Status:
+        """Fetch a single work package status by ID."""
         return self.get(f"statuses/{status_id}")
 
     def get_statuses(self) -> List[res.Status]:
+        """Fetch all work package statuses."""
         result = self.get_paged_collection("statuses", page_size=100)
 
         if result:
@@ -313,6 +342,7 @@ class ApiClient:
         return []
 
     def get_grid(self, grid_id: int) -> res.Grid:
+        """Fetch a single grid (board) by ID."""
         return self.get(f"grids/{grid_id}")
 
     def get_grids(self, scope: str = None) -> List[res.Grid]:
@@ -328,7 +358,7 @@ class ApiClient:
         return self.get_paged_collection("grids", page_size=100, payload=payload)
 
     def get_query(self, query_id: int) -> res.Query:
-        # we do not need any elements in here, use get_workpackages_by_query_id functions
+        """Fetch a saved query definition (without result elements)."""
         return self.get(f"queries/{query_id}", payload={'pageSize': 0})
 
 

@@ -1,3 +1,9 @@
+"""Resource models for OpenProject API responses.
+
+Each class represents an OpenProject resource type (Project, WorkPackage, etc.)
+and is automatically instantiated when the API returns a matching '_type' field.
+"""
+
 import datetime
 
 from typing import List
@@ -12,6 +18,8 @@ __all__ = [
 
 
 class GenericType:
+    """Base class for all OpenProject API resource types."""
+
     def __init__(self, json_object=None, datetime_fields=None, date_fields=None, debug=False):
         self.id = None
         self.__type = None
@@ -70,6 +78,8 @@ class GenericType:
 
 
 class Project(GenericType):
+    """An OpenProject project with hierarchy information."""
+
     def __init__(self, json_object=None):
         self.id = 0
         self.identifier = ''
@@ -110,6 +120,8 @@ class Project(GenericType):
 
 
 class WorkPackage(GenericType):
+    """A work package (task, bug, feature, etc.) with relations."""
+
     def __init__(self, json_object=None):
 
         self.createdat = None
@@ -290,6 +302,8 @@ class WorkPackage(GenericType):
 
 
 class Relation(GenericType):
+    """A directed relationship between two work packages."""
+
     def __init__(self, json_object=None):
         self.id = None
         self.description = None
@@ -319,6 +333,8 @@ class Relation(GenericType):
 
 
 class Version(GenericType):
+    """A project version (milestone) with date range and status."""
+
     def __init__(self, json_object=None):
         self.id = None
         self.createdat = None
@@ -338,6 +354,8 @@ class Version(GenericType):
 
 
 class User(GenericType):
+    """An OpenProject user account."""
+
     def __init__(self, json_object=None):
         self.id = None
         self.login = None
@@ -355,6 +373,8 @@ class User(GenericType):
         return f"User({self.id}): {self.name}"
 
 class PlaceholderUser(GenericType):
+    """A placeholder user for planning purposes."""
+
     def __init__(self, json_object=None):
         self.id = None
         self.name = None
@@ -368,6 +388,8 @@ class PlaceholderUser(GenericType):
         return f"PlaceholderUser({self.id}): {self.name}"
 
 class Membership(GenericType):
+    """A user's membership in a project with assigned roles."""
+
     def __init__(self, json_object=None):
         self.id = None
 
@@ -400,6 +422,8 @@ class Membership(GenericType):
         return f"Membership({self.id}): {self.principal} in {self.project}"
 
 class Status(GenericType):
+    """A work package status (open, in progress, closed, etc.)."""
+
     def __init__(self, json_object=None):
         self.id = None
 
@@ -417,6 +441,8 @@ class Status(GenericType):
         return f"Status({self.id}): {self.name}"
 
 class Grid(GenericType):
+    """A dashboard grid layout containing widgets."""
+
     def __init__(self, json_object=None):
         self.id = None
         self.columncount = None
@@ -452,6 +478,8 @@ class Grid(GenericType):
 
 
 class GridWidget(GenericType):
+    """A single widget within a Grid."""
+
     def __init__(self, json_object=None):
         self.id = None
         self.endcolumn = None
@@ -468,6 +496,8 @@ class GridWidget(GenericType):
 
 
 class Query(GenericType):
+    """A saved work package query with filters."""
+
     def __str__(self):
         return f"Query({self.id}): {self.name}"
 
@@ -515,7 +545,7 @@ class Query(GenericType):
 
 
 class Collection(GenericType):
-    # https://thispointer.com/python-how-to-make-a-class-iterable-create-iterator-class-for-it/
+    """A paginated collection of API resources."""
 
     def __init__(self, json_object=None):
         self._items = None
@@ -547,4 +577,6 @@ class Collection(GenericType):
 
 
 class WorkPackageCollection(Collection):
+    """A paginated collection of work packages."""
+
     pass
