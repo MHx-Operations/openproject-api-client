@@ -5,7 +5,7 @@ import json
 import pytest
 import responses
 
-from openproject_api_client.apiclient import ApiClient, ApiError
+from openproject_api_client.apiclient import ApiClient, ApiError, RequestError
 from openproject_api_client.resources import (
     Collection,
     GenericType,
@@ -489,3 +489,235 @@ class TestProjectHierarchy:
         assert isinstance(projects, list)
         assert len(projects) == 1
         assert isinstance(projects[0], Project)
+
+
+# -- http_post / http_patch ------------------------------------------------
+
+class TestHttpPost:
+    @responses.activate
+    def test_sends_json_body(self, workpackage_json):
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/projects/1/work_packages",
+            json=workpackage_json,
+            status=201,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        resp = client.http_post("projects/1/work_packages", {"subject": "New WP"})
+        assert resp.status_code == 201
+        req = responses.calls[0].request
+        assert req.headers["Content-Type"] == "application/json"
+        body = json.loads(req.body)
+        assert body["subject"] == "New WP"
+
+    @responses.activate
+    def test_post_decode_response(self, workpackage_json):
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/projects/1/work_packages",
+            json=workpackage_json,
+            status=201,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        result = client.post("projects/1/work_packages", {"subject": "New WP"})
+        assert isinstance(result, WorkPackage)
+
+    @responses.activate
+    def test_post_error_raises(self):
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/projects/1/work_packages",
+            json={"_type": "Error", "message": "Validation failed"},
+            status=422,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        with pytest.raises(RequestError, match="422"):
+            client.post("projects/1/work_packages", {"subject": ""})
+
+
+class TestHttpPatch:
+    @responses.activate
+    def test_sends_json_body(self, workpackage_json):
+        responses.add(
+            responses.PATCH,
+            f"{BASE_URL}api/v3/work_packages/42",
+            json=workpackage_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        resp = client.http_patch("work_packages/42", {"subject": "Updated"})
+        assert resp.status_code == 200
+        req = responses.calls[0].request
+        assert req.headers["Content-Type"] == "application/json"
+        body = json.loads(req.body)
+        assert body["subject"] == "Updated"
+
+    @responses.activate
+    def test_patch_decode_response(self, workpackage_json):
+        responses.add(
+            responses.PATCH,
+            f"{BASE_URL}api/v3/work_packages/42",
+            json=workpackage_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        result = client.patch("work_packages/42", {"lockVersion": 5, "subject": "Updated"})
+        assert isinstance(result, WorkPackage)
+
+    @responses.activate
+    def test_patch_error_raises(self):
+        responses.add(
+            responses.PATCH,
+            f"{BASE_URL}api/v3/work_packages/42",
+            json={"_type": "Error", "message": "Conflict"},
+            status=409,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        with pytest.raises(RequestError, match="409"):
+            client.patch("work_packages/42", {"lockVersion": 1})
+
+
+# -- Write convenience methods ---------------------------------------------
+
+class TestCreateWorkpackage:
+    @responses.activate
+    def test_minimal(self, workpackage_json):
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/projects/1/work_packages",
+            json=workpackage_json,
+            status=201,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        wp = client.create_workpackage(1, "Test WP")
+        assert isinstance(wp, WorkPackage)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["subject"] == "Test WP"
+        assert "_links" not in body
+
+    @responses.activate
+    def test_with_all_options(self, workpackage_json):
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/projects/1/work_packages",
+            json=workpackage_json,
+            status=201,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        client.create_workpackage(
+            1, "Full WP",
+            type_id=2, status_id=3, assignee_id=4, responsible_id=5,
+            priority_id=6, version_id=7, parent_id=8, category_id=9,
+            budget_id=10, start_date="2024-01-01", due_date="2024-02-01",
+            estimated_time="PT8H", percentage_done=50,
+            description="Some **markdown**", schedule_manually=True,
+        )
+        body = json.loads(responses.calls[0].request.body)
+        assert body["subject"] == "Full WP"
+        assert body["description"] == {"raw": "Some **markdown**"}
+        assert body["startDate"] == "2024-01-01"
+        assert body["dueDate"] == "2024-02-01"
+        assert body["estimatedTime"] == "PT8H"
+        assert body["percentageDone"] == 50
+        assert body["scheduleManually"] is True
+        links = body["_links"]
+        assert links["type"]["href"] == "/api/v3/types/2"
+        assert links["status"]["href"] == "/api/v3/statuses/3"
+        assert links["assignee"]["href"] == "/api/v3/users/4"
+        assert links["responsible"]["href"] == "/api/v3/users/5"
+        assert links["priority"]["href"] == "/api/v3/priorities/6"
+        assert links["version"]["href"] == "/api/v3/versions/7"
+        assert links["parent"]["href"] == "/api/v3/work_packages/8"
+        assert links["category"]["href"] == "/api/v3/categories/9"
+        assert links["budget"]["href"] == "/api/v3/budgets/10"
+
+
+class TestUpdateWorkpackage:
+    @responses.activate
+    def test_minimal(self, workpackage_json):
+        responses.add(
+            responses.PATCH,
+            f"{BASE_URL}api/v3/work_packages/42",
+            json=workpackage_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        wp = client.update_workpackage(42, lock_version=5, subject="New title")
+        assert isinstance(wp, WorkPackage)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["lockVersion"] == 5
+        assert body["subject"] == "New title"
+
+    @responses.activate
+    def test_status_change(self, workpackage_json):
+        responses.add(
+            responses.PATCH,
+            f"{BASE_URL}api/v3/work_packages/42",
+            json=workpackage_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        client.update_workpackage(42, lock_version=5, status_id=7)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["_links"]["status"]["href"] == "/api/v3/statuses/7"
+
+    @responses.activate
+    def test_remaining_time(self, workpackage_json):
+        responses.add(
+            responses.PATCH,
+            f"{BASE_URL}api/v3/work_packages/42",
+            json=workpackage_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        client.update_workpackage(42, lock_version=5, remaining_time="PT2H")
+        body = json.loads(responses.calls[0].request.body)
+        assert body["remainingTime"] == "PT2H"
+
+
+class TestAddComment:
+    @responses.activate
+    def test_add_comment(self):
+        activity_json = {"_type": "Activity", "id": 999, "comment": {"raw": "hello"}}
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/work_packages/42/activities",
+            json=activity_json,
+            status=201,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        result = client.add_workpackage_comment(42, "hello")
+        body = json.loads(responses.calls[0].request.body)
+        assert body["comment"]["raw"] == "hello"
+
+
+class TestCreateRelation:
+    @responses.activate
+    def test_create_basic(self, relation_json):
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/relations",
+            json=relation_json,
+            status=201,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        rel = client.create_relation(42, 50, "blocks")
+        assert isinstance(rel, Relation)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["type"] == "blocks"
+        assert body["_links"]["from"]["href"] == "/api/v3/work_packages/42"
+        assert body["_links"]["to"]["href"] == "/api/v3/work_packages/50"
+
+    @responses.activate
+    def test_create_with_lag(self, relation_json):
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/relations",
+            json=relation_json,
+            status=201,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        client.create_relation(42, 50, "precedes", description="wait", lag=3)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["description"] == "wait"
+        assert body["lag"] == 3

@@ -1,7 +1,7 @@
 """Client for the OpenProject API v3.
 
-Provides a simple interface to read data from any OpenProject instance
-(version 10 and later). Handles pagination, JSON decoding, and maps
+Provides a simple interface to read and write data from any OpenProject
+instance (version 10 and later). Handles pagination, JSON decoding, and maps
 API responses to typed Python objects.
 """
 
@@ -48,42 +48,92 @@ class ApiClient:
         if not self.base_url.endswith('/'):
             self.base_url += '/'
 
+    def _endpoint(self, resource):
+        """Build the full API endpoint URL for a resource path."""
+        return f"{self.base_url}{self._rootpath}/{resource}"
+
+    def _headers(self, content_type=None):
+        """Return standard request headers."""
+        h = {
+            'Accept': 'application/json;charset=UTF-8',
+            'accept-encoding': 'identity, gzip',
+        }
+        if content_type:
+            h['Content-Type'] = content_type
+        return h
+
     def http_get(self, resource, payload=None):
-        """ Perform an HTTP GET request against the given endpoint. """
-        # Avoid dangerous default function argument `{}`
+        """Perform an HTTP GET request against the given endpoint."""
         payload = payload or {}
-        # versioning an API guarantees compatibility
-        endpoint = f"{self.base_url}{self._rootpath}/{resource}"
+        endpoint = self._endpoint(resource)
         logger.debug("GET %s params=%s", endpoint, payload or "(none)")
         resp = requests.get(
             endpoint,
-            # attach parameters to the url, like `&foo=bar`
             params=payload,
-            # tell the API we expect to parse JSON responses
-            headers={
-                'Accept': 'application/json;charset=UTF-8',
-                'accept-encoding': 'identity, gzip',
-            },
+            headers=self._headers(),
             auth=self.auth
         )
         logger.debug("GET %s -> %s", endpoint, resp.status_code)
         return resp
 
+    def http_post(self, resource, body):
+        """Perform an HTTP POST request with a JSON body."""
+        endpoint = self._endpoint(resource)
+        logger.debug("POST %s", endpoint)
+        resp = requests.post(
+            endpoint,
+            json=body,
+            headers=self._headers('application/json'),
+            auth=self.auth
+        )
+        logger.debug("POST %s -> %s", endpoint, resp.status_code)
+        return resp
+
+    def http_patch(self, resource, body):
+        """Perform an HTTP PATCH request with a JSON body."""
+        endpoint = self._endpoint(resource)
+        logger.debug("PATCH %s", endpoint)
+        resp = requests.patch(
+            endpoint,
+            json=body,
+            headers=self._headers('application/json'),
+            auth=self.auth
+        )
+        logger.debug("PATCH %s -> %s", endpoint, resp.status_code)
+        return resp
+
     def get(self, resource, payload=None):
-        """
-        a get method for a generic endpoint
-
-        :param resource:
-        :param payload:
-        :return:
-        """
-
+        """GET a resource and decode the response."""
         response = self.http_get(resource, payload)
 
         if response:
             return self.decode_response(response)
         else:
             return None
+
+    def post(self, resource, body):
+        """POST a resource and decode the response.
+
+        Raises RequestError on HTTP 4xx/5xx.
+        """
+        response = self.http_post(resource, body)
+        if response.status_code >= 400:
+            raise RequestError(
+                f"POST {resource} failed ({response.status_code}): {response.text}"
+            )
+        return self.decode_response(response)
+
+    def patch(self, resource, body):
+        """PATCH a resource and decode the response.
+
+        Raises RequestError on HTTP 4xx/5xx.
+        """
+        response = self.http_patch(resource, body)
+        if response.status_code >= 400:
+            raise RequestError(
+                f"PATCH {resource} failed ({response.status_code}): {response.text}"
+            )
+        return self.decode_response(response)
 
     def get_paged_collection(self, resource: str, payload: object = None, page_size: int = 5) -> list[res.GenericType]:
         elements = []
@@ -368,6 +418,148 @@ class ApiClient:
     def get_query(self, query_id: int) -> res.Query:
         """Fetch a saved query definition (without result elements)."""
         return self.get(f"queries/{query_id}", payload={'pageSize': 0})
+
+    # write methods
+    # ###################################################
+
+    def create_workpackage(self, project_id: int, subject: str, *,
+                           type_id: int = None, status_id: int = None,
+                           assignee_id: int = None, responsible_id: int = None,
+                           priority_id: int = None, version_id: int = None,
+                           parent_id: int = None, category_id: int = None,
+                           budget_id: int = None,
+                           start_date: str = None, due_date: str = None,
+                           estimated_time: str = None,
+                           percentage_done: int = None,
+                           description: str = None,
+                           schedule_manually: bool = None) -> res.WorkPackage:
+        """Create a new work package in a project."""
+        body = {"subject": subject}
+
+        if description is not None:
+            body["description"] = {"raw": description}
+        if start_date is not None:
+            body["startDate"] = start_date
+        if due_date is not None:
+            body["dueDate"] = due_date
+        if estimated_time is not None:
+            body["estimatedTime"] = estimated_time
+        if percentage_done is not None:
+            body["percentageDone"] = percentage_done
+        if schedule_manually is not None:
+            body["scheduleManually"] = schedule_manually
+
+        links = {}
+        if type_id is not None:
+            links["type"] = {"href": f"/api/v3/types/{type_id}"}
+        if status_id is not None:
+            links["status"] = {"href": f"/api/v3/statuses/{status_id}"}
+        if assignee_id is not None:
+            links["assignee"] = {"href": f"/api/v3/users/{assignee_id}"}
+        if responsible_id is not None:
+            links["responsible"] = {"href": f"/api/v3/users/{responsible_id}"}
+        if priority_id is not None:
+            links["priority"] = {"href": f"/api/v3/priorities/{priority_id}"}
+        if version_id is not None:
+            links["version"] = {"href": f"/api/v3/versions/{version_id}"}
+        if parent_id is not None:
+            links["parent"] = {"href": f"/api/v3/work_packages/{parent_id}"}
+        if category_id is not None:
+            links["category"] = {"href": f"/api/v3/categories/{category_id}"}
+        if budget_id is not None:
+            links["budget"] = {"href": f"/api/v3/budgets/{budget_id}"}
+        if links:
+            body["_links"] = links
+
+        return self.post(f"projects/{project_id}/work_packages", body)
+
+    def update_workpackage(self, workpackage_id: int, lock_version: int, *,
+                           subject: str = None,
+                           type_id: int = None, status_id: int = None,
+                           assignee_id: int = None, responsible_id: int = None,
+                           priority_id: int = None, version_id: int = None,
+                           parent_id: int = None, category_id: int = None,
+                           budget_id: int = None,
+                           start_date: str = None, due_date: str = None,
+                           estimated_time: str = None,
+                           percentage_done: int = None,
+                           description: str = None,
+                           schedule_manually: bool = None,
+                           remaining_time: str = None) -> res.WorkPackage:
+        """Update an existing work package.
+
+        lock_version is required for optimistic locking.
+        """
+        body = {"lockVersion": lock_version}
+
+        if subject is not None:
+            body["subject"] = subject
+        if description is not None:
+            body["description"] = {"raw": description}
+        if start_date is not None:
+            body["startDate"] = start_date
+        if due_date is not None:
+            body["dueDate"] = due_date
+        if estimated_time is not None:
+            body["estimatedTime"] = estimated_time
+        if percentage_done is not None:
+            body["percentageDone"] = percentage_done
+        if schedule_manually is not None:
+            body["scheduleManually"] = schedule_manually
+        if remaining_time is not None:
+            body["remainingTime"] = remaining_time
+
+        links = {}
+        if type_id is not None:
+            links["type"] = {"href": f"/api/v3/types/{type_id}"}
+        if status_id is not None:
+            links["status"] = {"href": f"/api/v3/statuses/{status_id}"}
+        if assignee_id is not None:
+            links["assignee"] = {"href": f"/api/v3/users/{assignee_id}"}
+        if responsible_id is not None:
+            links["responsible"] = {"href": f"/api/v3/users/{responsible_id}"}
+        if priority_id is not None:
+            links["priority"] = {"href": f"/api/v3/priorities/{priority_id}"}
+        if version_id is not None:
+            links["version"] = {"href": f"/api/v3/versions/{version_id}"}
+        if parent_id is not None:
+            links["parent"] = {"href": f"/api/v3/work_packages/{parent_id}"}
+        if category_id is not None:
+            links["category"] = {"href": f"/api/v3/categories/{category_id}"}
+        if budget_id is not None:
+            links["budget"] = {"href": f"/api/v3/budgets/{budget_id}"}
+        if links:
+            body["_links"] = links
+
+        return self.patch(f"work_packages/{workpackage_id}", body)
+
+    def add_workpackage_comment(self, workpackage_id: int, message: str) -> res.GenericType:
+        """Add a comment (activity) to a work package."""
+        body = {
+            "comment": {"raw": message},
+        }
+        return self.post(f"work_packages/{workpackage_id}/activities", body)
+
+    def create_relation(self, from_id: int, to_id: int, relation_type: str,
+                        *, description: str = None, lag: int = None) -> res.Relation:
+        """Create a relation between two work packages.
+
+        relation_type: one of relates, duplicates, duplicated, blocks, blocked,
+                       precedes, follows, includes, partof, requires, required
+        """
+        body = {
+            "type": relation_type,
+            "_links": {
+                "from": {"href": f"/api/v3/work_packages/{from_id}"},
+                "to": {"href": f"/api/v3/work_packages/{to_id}"},
+            },
+        }
+        if description is not None:
+            body["description"] = description
+        if lag is not None:
+            body["lag"] = lag
+
+        return self.post("relations", body)
 
 
 class ApiError(Exception):

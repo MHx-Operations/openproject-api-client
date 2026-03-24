@@ -6,7 +6,7 @@ from unittest import mock
 
 import pytest
 
-from openproject_api_client.cli import main, dispatch, json_out, text_out, _obj_to_dict
+from openproject_api_client.cli import main, dispatch, json_out, text_out, _obj_to_dict, GUIDE_TEXT
 from openproject_api_client.resources import (
     Project, WorkPackage, Relation, Version, User, PlaceholderUser,
     Membership, Status, Grid, Query,
@@ -67,10 +67,31 @@ class TestCliArgParsing:
                 main()
 
 
-# -- Subcommand routing ----------------------------------------------------
+# -- Guide -----------------------------------------------------------------
 
-class TestDispatch:
-    """Test that dispatch() correctly routes to client methods."""
+class TestGuide:
+    def test_guide_prints_text(self, capsys):
+        with mock.patch("sys.argv", ["openproject-cli", "guide"]):
+            main()
+        out = capsys.readouterr().out
+        assert "SETUP" in out
+        assert "READ COMMANDS" in out
+        assert "WRITE COMMANDS" in out
+        assert "TYPICAL AI-AGENT WORKFLOW" in out
+        assert "RELATION TYPES" in out
+        assert "TIME FORMAT" in out
+
+    def test_guide_no_credentials_needed(self):
+        """guide subcommand works without baseurl/apikey."""
+        with mock.patch.dict(os.environ, _env(), clear=True):
+            with mock.patch("sys.argv", ["openproject-cli", "guide"]):
+                main()  # should not raise
+
+
+# -- Subcommand routing (read) --------------------------------------------
+
+class TestDispatchRead:
+    """Test that dispatch() correctly routes to read client methods."""
 
     def _make_args(self, **kwargs):
         return mock.MagicMock(**kwargs)
@@ -213,6 +234,84 @@ class TestDispatch:
         assert result is None
 
 
+# -- Subcommand routing (write) --------------------------------------------
+
+class TestDispatchWrite:
+    """Test that dispatch() correctly routes to write client methods."""
+
+    def _make_args(self, **kwargs):
+        return mock.MagicMock(**kwargs)
+
+    def test_create_work_package(self):
+        client = mock.MagicMock()
+        args = self._make_args(
+            mode='create-work-package', project_id=1, subject="New WP",
+            type_id=2, status_id=3, assignee_id=4, responsible_id=5,
+            priority_id=6, version_id=7, parent_id=8, category_id=9,
+            budget_id=10, start_date="2024-01-01", due_date="2024-02-01",
+            estimated_time="PT8H", percentage_done=50,
+            description="desc", schedule_manually=True,
+        )
+        dispatch(client, args)
+        client.create_workpackage.assert_called_once_with(
+            project_id=1, subject="New WP",
+            type_id=2, status_id=3, assignee_id=4, responsible_id=5,
+            priority_id=6, version_id=7, parent_id=8, category_id=9,
+            budget_id=10, start_date="2024-01-01", due_date="2024-02-01",
+            estimated_time="PT8H", percentage_done=50,
+            description="desc", schedule_manually=True,
+        )
+
+    def test_update_work_package_fetches_lock_version(self):
+        client = mock.MagicMock()
+        mock_wp = mock.MagicMock()
+        mock_wp.lockversion = 5
+        client.get_workpackage.return_value = mock_wp
+        args = self._make_args(
+            mode='update-work-package', id=42,
+            subject="Updated", type_id=None, status_id=7,
+            assignee_id=None, responsible_id=None,
+            priority_id=None, version_id=None, parent_id=None,
+            category_id=None, budget_id=None,
+            start_date=None, due_date=None,
+            estimated_time=None, remaining_time=None,
+            percentage_done=None, description=None,
+            schedule_manually=None,
+        )
+        dispatch(client, args)
+        client.get_workpackage.assert_called_once_with(42)
+        client.update_workpackage.assert_called_once_with(
+            workpackage_id=42, lock_version=5,
+            subject="Updated", type_id=None, status_id=7,
+            assignee_id=None, responsible_id=None,
+            priority_id=None, version_id=None, parent_id=None,
+            category_id=None, budget_id=None,
+            start_date=None, due_date=None,
+            estimated_time=None, remaining_time=None,
+            percentage_done=None, description=None,
+            schedule_manually=None,
+        )
+
+    def test_add_comment(self):
+        client = mock.MagicMock()
+        args = self._make_args(mode='add-comment', id=42, message="Status update")
+        dispatch(client, args)
+        client.add_workpackage_comment.assert_called_once_with(42, "Status update")
+
+    def test_create_relation(self):
+        client = mock.MagicMock()
+        args = self._make_args(
+            mode='create-relation',
+            from_id=42, to_id=50, relation_type='blocks',
+            description="reason", lag=2,
+        )
+        dispatch(client, args)
+        client.create_relation.assert_called_once_with(
+            from_id=42, to_id=50, relation_type='blocks',
+            description="reason", lag=2,
+        )
+
+
 # -- Output formatting -----------------------------------------------------
 
 class TestTextOut:
@@ -280,7 +379,6 @@ class TestJsonOut:
         json_out(p)
         captured = capsys.readouterr()
         parsed = json.loads(captured.out)
-        # _type and other private attrs should be excluded
         assert "_type" not in parsed
         assert "_GenericType__type" not in parsed
 
@@ -404,3 +502,85 @@ class TestMainIntegration:
                     with pytest.raises(SystemExit) as exc_info:
                         main()
                     assert exc_info.value.code == 1
+
+    def test_request_error_exits_nonzero(self):
+        import openproject_api_client as opc
+        env = _env(OPENPROJECT_BASEURL="https://op.example.com/",
+                    OPENPROJECT_APIKEY="test-key")
+        with mock.patch.dict(os.environ, env, clear=True):
+            with mock.patch("sys.argv", ["openproject-cli", "projects"]):
+                with mock.patch("openproject_api_client.ApiClient") as MockClient:
+                    MockClient.return_value.get_projects.side_effect = opc.RequestError("fail")
+                    with pytest.raises(SystemExit) as exc_info:
+                        main()
+                    assert exc_info.value.code == 1
+
+
+# -- Write integration tests -----------------------------------------------
+
+class TestMainWriteIntegration:
+    def test_create_work_package(self, capsys):
+        env = _env(OPENPROJECT_BASEURL="https://op.example.com/",
+                    OPENPROJECT_APIKEY="test-key")
+        cmd = ["openproject-cli", "create-work-package",
+               "--project-id", "1", "--subject", "New task", "--status-id", "3"]
+        with mock.patch.dict(os.environ, env, clear=True):
+            with mock.patch("sys.argv", cmd):
+                with mock.patch("openproject_api_client.ApiClient") as MockClient:
+                    instance = MockClient.return_value
+                    instance.create_workpackage.return_value = "WP(99): New task"
+                    main()
+                    instance.create_workpackage.assert_called_once()
+                    call_kwargs = instance.create_workpackage.call_args
+                    assert call_kwargs.kwargs['project_id'] == 1
+                    assert call_kwargs.kwargs['subject'] == "New task"
+                    assert call_kwargs.kwargs['status_id'] == 3
+        out = capsys.readouterr().out
+        assert "New task" in out
+
+    def test_update_work_package(self, capsys):
+        env = _env(OPENPROJECT_BASEURL="https://op.example.com/",
+                    OPENPROJECT_APIKEY="test-key")
+        cmd = ["openproject-cli", "update-work-package", "42", "--status-id", "7"]
+        with mock.patch.dict(os.environ, env, clear=True):
+            with mock.patch("sys.argv", cmd):
+                with mock.patch("openproject_api_client.ApiClient") as MockClient:
+                    instance = MockClient.return_value
+                    mock_wp = mock.MagicMock()
+                    mock_wp.lockversion = 5
+                    instance.get_workpackage.return_value = mock_wp
+                    instance.update_workpackage.return_value = "WP(42): Updated"
+                    main()
+                    instance.get_workpackage.assert_called_once_with(42)
+                    call_kwargs = instance.update_workpackage.call_args.kwargs
+                    assert call_kwargs['workpackage_id'] == 42
+                    assert call_kwargs['lock_version'] == 5
+                    assert call_kwargs['status_id'] == 7
+
+    def test_add_comment(self, capsys):
+        env = _env(OPENPROJECT_BASEURL="https://op.example.com/",
+                    OPENPROJECT_APIKEY="test-key")
+        cmd = ["openproject-cli", "add-comment", "42", "--message", "Done"]
+        with mock.patch.dict(os.environ, env, clear=True):
+            with mock.patch("sys.argv", cmd):
+                with mock.patch("openproject_api_client.ApiClient") as MockClient:
+                    instance = MockClient.return_value
+                    instance.add_workpackage_comment.return_value = "Activity(1)"
+                    main()
+                    instance.add_workpackage_comment.assert_called_once_with(42, "Done")
+
+    def test_create_relation(self, capsys):
+        env = _env(OPENPROJECT_BASEURL="https://op.example.com/",
+                    OPENPROJECT_APIKEY="test-key")
+        cmd = ["openproject-cli", "create-relation",
+               "--from-id", "42", "--to-id", "50", "--type", "blocks"]
+        with mock.patch.dict(os.environ, env, clear=True):
+            with mock.patch("sys.argv", cmd):
+                with mock.patch("openproject_api_client.ApiClient") as MockClient:
+                    instance = MockClient.return_value
+                    instance.create_relation.return_value = "Relation(100)"
+                    main()
+                    instance.create_relation.assert_called_once_with(
+                        from_id=42, to_id=50, relation_type='blocks',
+                        description=None, lag=None,
+                    )
