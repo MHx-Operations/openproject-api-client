@@ -87,12 +87,16 @@ class TestProject:
         assert isinstance(p.createdat, datetime.datetime)
         assert p.parent_id is None
 
+    def test_favorited(self, project_json):
+        p = Project(project_json)
+        assert p.favorited is True
+
     def test_parent_from_links(self, child_project_json):
         p = Project(child_project_json)
         assert p.parent_id == 1
 
     def test_parent_from_embedded(self, child_project_json):
-        # _embedded takes precedence since it's parsed first — but _links
+        # _embedded takes precedence since it's parsed first -- but _links
         # also sets it. Both should result in parent_id=1.
         p = Project(child_project_json)
         assert p.parent_id == 1
@@ -118,6 +122,7 @@ class TestWorkPackage:
         assert wp.type == "Bug"
         assert wp.type_id == 1
         assert wp.priority == "High"
+        assert wp.priority_id == 2
         assert wp.status == "New"
         assert wp.status_id == 1
         assert wp.project == "My Project"
@@ -131,6 +136,41 @@ class TestWorkPackage:
         assert wp.version == "v1.0"
         assert wp.version_id == 7
         assert wp.parent_id == 10
+
+    def test_new_attributes(self, workpackage_json):
+        wp = WorkPackage(workpackage_json)
+        assert wp.readonly is False
+        assert wp.derivedpercentagedone == 25
+        assert wp.ignorenonworkingdays is False
+        assert wp.spenttime == "PT5H"
+        assert wp.duration == "P14D"
+        assert wp.date is None
+        assert wp.budget == "Q1 Budget"
+        assert wp.budget_id == 8
+        assert wp.category == "Backend"
+        assert wp.category_id == 3
+
+    def test_date_fields_parsed(self, workpackage_json):
+        wp = WorkPackage(workpackage_json)
+        assert isinstance(wp.startdate, datetime.datetime)
+        assert wp.startdate.day == 1
+        assert isinstance(wp.duedate, datetime.datetime)
+        assert wp.duedate.day == 15
+        assert isinstance(wp.derivedstartdate, datetime.datetime)
+        assert isinstance(wp.derivedduedate, datetime.datetime)
+
+    def test_embedded_budget_category(self, workpackage_json):
+        """When _embedded contains budget/category, those override links."""
+        wp_json = dict(workpackage_json)
+        wp_json["_embedded"] = {
+            "budget": {"id": 9, "subject": "Q2 Budget"},
+            "category": {"id": 4, "name": "Frontend"},
+        }
+        wp = WorkPackage(wp_json)
+        assert wp.budget == "Q2 Budget"
+        assert wp.budget_id == 9
+        assert wp.category == "Frontend"
+        assert wp.category_id == 4
 
     def test_embedded_relations(self, workpackage_with_relations_json):
         wp = WorkPackage(workpackage_with_relations_json)
@@ -307,6 +347,22 @@ class TestRelation:
         assert r.to_title == "Deploy"
         assert r.description == "blocker"
 
+    def test_lag(self, relation_json):
+        r = Relation(relation_json)
+        assert r.lag == 2
+
+    def test_lag_default_none(self):
+        r = Relation({
+            "_type": "Relation", "id": 1,
+            "name": "relates", "type": "relates", "reverseType": "relates",
+            "description": "",
+            "_links": {
+                "from": {"href": "/api/v3/work_packages/1", "title": "A"},
+                "to": {"href": "/api/v3/work_packages/2", "title": "B"},
+            },
+        })
+        assert r.lag is None
+
     def test_str(self, relation_json):
         r = Relation(relation_json)
         s = str(r)
@@ -344,6 +400,13 @@ class TestUser:
         assert u.name == "Alice Smith"
         assert u.email == "alice@example.com"
 
+    def test_new_attributes(self, user_json):
+        u = User(user_json)
+        assert u.admin is False
+        assert u.avatar == "https://op.example.com/avatars/3"
+        assert u.status == "active"
+        assert u.language == "en"
+
     def test_str(self, user_json):
         assert "Alice Smith" in str(User(user_json))
 
@@ -372,6 +435,24 @@ class TestMembership:
         assert m.principal_id == 3
         assert m.principal_type == "users"
 
+    def test_roles(self, membership_json):
+        m = Membership(membership_json)
+        assert len(m.roles) == 2
+        assert m.roles[0] == {"id": 5, "name": "Member"}
+        assert m.roles[1] == {"id": 6, "name": "Developer"}
+
+    def test_roles_empty_when_no_embedded(self):
+        m = Membership({
+            "_type": "Membership", "id": 21,
+            "createdAt": "2024-01-01T00:00:00+00:00",
+            "updatedAt": "2024-01-01T00:00:00+00:00",
+            "_links": {
+                "project": {"href": "/api/v3/projects/1", "title": "P"},
+                "principal": {"href": "/api/v3/users/1", "title": "U"},
+            },
+        })
+        assert m.roles == []
+
     def test_str(self, membership_json):
         s = str(Membership(membership_json))
         assert "Alice Smith" in s
@@ -387,6 +468,13 @@ class TestStatus:
         assert s.name == "New"
         assert s.isclosed is False
         assert s.position == 1
+
+    def test_new_attributes(self, status_json):
+        s = Status(status_json)
+        assert s.isdefault is True
+        assert s.isreadonly is False
+        assert s.excludedfromtotals is False
+        assert s.defaultdoneratio == 0
 
     def test_str(self, status_json):
         assert "New" in str(Status(status_json))
@@ -438,6 +526,10 @@ class TestQuery:
         assert q.user == "Alice Smith"
         assert q.user_id == 3
         assert q.public is True
+
+    def test_timestamps(self, query_json):
+        q = Query(query_json)
+        assert q.timestamps == []
 
     def test_str(self, query_json):
         assert "Open Bugs" in str(Query(query_json))

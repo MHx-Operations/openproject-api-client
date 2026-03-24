@@ -13,6 +13,7 @@ def project_json():
         "identifier": "my-project",
         "name": "My Project",
         "active": True,
+        "favorited": True,
         "public": False,
         "description": {"format": "markdown", "raw": "desc", "html": "<p>desc</p>"},
         "createdAt": "2024-01-15T10:00:00+00:00",
@@ -60,13 +61,19 @@ def workpackage_json():
         "subject": "Fix the widget",
         "description": {"format": "markdown", "raw": "details", "html": "<p>details</p>"},
         "scheduleManually": False,
-        "startDate": None,
-        "dueDate": None,
-        "derivedStartDate": None,
-        "derivedDueDate": None,
-        "estimatedTime": None,
-        "derivedEstimatedTime": None,
+        "startDate": "2024-03-01",
+        "dueDate": "2024-03-15",
+        "date": None,
+        "derivedStartDate": "2024-03-01",
+        "derivedDueDate": "2024-03-20",
+        "estimatedTime": "PT10H",
+        "derivedEstimatedTime": "PT15H",
+        "derivedPercentageDone": 25,
         "percentageDone": 0,
+        "readonly": False,
+        "ignoreNonWorkingDays": False,
+        "spentTime": "PT5H",
+        "duration": "P14D",
         "createdAt": "2024-03-01T12:00:00+00:00",
         "updatedAt": "2024-03-05T15:00:00+00:00",
         "_links": {
@@ -79,6 +86,8 @@ def workpackage_json():
             "assignee": {"href": "/api/v3/users/4", "title": "Bob"},
             "responsible": {"href": "/api/v3/users/5", "title": "Carol"},
             "version": {"href": "/api/v3/versions/7", "title": "v1.0"},
+            "budget": {"href": "/api/v3/budgets/8", "title": "Q1 Budget"},
+            "category": {"href": "/api/v3/categories/3", "title": "Backend"},
         },
         "_embedded": {},
     }
@@ -158,6 +167,7 @@ def relation_json():
         "type": "blocks",
         "reverseType": "blocked",
         "description": "blocker",
+        "lag": 2,
         "_links": {
             "from": {"href": "/api/v3/work_packages/42", "title": "Fix the widget"},
             "to": {"href": "/api/v3/work_packages/50", "title": "Deploy"},
@@ -191,6 +201,10 @@ def user_json():
         "lastName": "Smith",
         "name": "Alice Smith",
         "email": "alice@example.com",
+        "admin": False,
+        "avatar": "https://op.example.com/avatars/3",
+        "status": "active",
+        "language": "en",
         "createdAt": "2023-01-01T00:00:00+00:00",
         "updatedAt": "2023-06-01T00:00:00+00:00",
     }
@@ -218,6 +232,12 @@ def membership_json():
             "project": {"href": "/api/v3/projects/1", "title": "My Project"},
             "principal": {"href": "/api/v3/users/3", "title": "Alice Smith"},
         },
+        "_embedded": {
+            "roles": [
+                {"id": 5, "name": "Member"},
+                {"id": 6, "name": "Developer"},
+            ]
+        },
     }
 
 
@@ -229,6 +249,10 @@ def status_json():
         "name": "New",
         "color": "#1A67A3",
         "isClosed": False,
+        "isDefault": True,
+        "isReadonly": False,
+        "excludedFromTotals": False,
+        "defaultDoneRatio": 0,
         "position": 1,
         "createdAt": "2023-01-01T00:00:00+00:00",
         "updatedAt": "2023-01-01T00:00:00+00:00",
@@ -283,6 +307,7 @@ def query_json():
         "timelineLabels": {},
         "timelineVisible": False,
         "timelineZoomLevel": "days",
+        "timestamps": [],
         "createdAt": "2024-01-01T00:00:00+00:00",
         "updatedAt": "2024-03-01T00:00:00+00:00",
         "_links": {
