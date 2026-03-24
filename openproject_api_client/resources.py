@@ -14,6 +14,8 @@ __all__ = [
     "GenericType", "Project", "WorkPackage", "Relation", "Version",
     "User", "PlaceholderUser", "Membership", "Status", "Grid",
     "GridWidget", "Query", "Collection", "WorkPackageCollection",
+    "Type", "Priority", "TimeEntry", "Activity", "Attachment",
+    "Notification", "Category",
 ]
 
 
@@ -595,6 +597,221 @@ class Query(GenericType):
                     self.results = apiclient.ApiClient.decode(json_object['_embedded']['results'])
                 except (AttributeError, KeyError, apiclient.ApiError):
                     self.results = json_object['_embedded']['results']
+
+
+class Type(GenericType):
+    """A work package type (Task, Bug, Feature, etc.)."""
+
+    def __init__(self, json_object=None):
+        self.id = None
+        self.name = None
+        self.color = None
+        self.position = None
+        self.isdefault = None
+        self.ismilestone = None
+        self.createdat = None
+        self.updatedat = None
+
+        super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'])
+
+    def __str__(self):
+        return f"Type({self.id}): {self.name}"
+
+
+class Priority(GenericType):
+    """A work package priority level."""
+
+    def __init__(self, json_object=None):
+        self.id = None
+        self.name = None
+        self.color = None
+        self.position = None
+        self.isactive = None
+        self.isdefault = None
+        self.createdat = None
+        self.updatedat = None
+
+        super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'])
+
+    def __str__(self):
+        return f"Priority({self.id}): {self.name}"
+
+
+class Category(GenericType):
+    """A work package category within a project."""
+
+    def __init__(self, json_object=None):
+        self.id = None
+        self.name = None
+
+        self.project = None
+        self.project_id = None
+        self.defaultassignee = None
+        self.defaultassignee_id = None
+
+        super().__init__(json_object, debug=False)
+
+        if '_links' in json_object:
+            if 'project' in json_object['_links']:
+                if json_object['_links']['project']['href']:
+                    self.project = json_object['_links']['project'].get('title')
+                    self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+            if 'defaultAssignee' in json_object['_links']:
+                if json_object['_links']['defaultAssignee']['href']:
+                    self.defaultassignee = json_object['_links']['defaultAssignee'].get('title')
+                    self.defaultassignee_id = int(json_object['_links']['defaultAssignee']['href'].split("/")[-1])
+
+    def __str__(self):
+        return f"Category({self.id}): {self.name}"
+
+
+class TimeEntry(GenericType):
+    """A time tracking entry on a work package."""
+
+    def __init__(self, json_object=None):
+        self.id = None
+        self.comment = None
+        self.hours = None
+        self.spentOn = None
+        self.ongoing = None
+        self.createdat = None
+        self.updatedat = None
+
+        self.project = None
+        self.project_id = None
+        self.workpackage = None
+        self.workpackage_id = None
+        self.user = None
+        self.user_id = None
+        self.activity = None
+        self.activity_id = None
+
+        super().__init__(json_object, debug=False,
+                         datetime_fields=['createdat', 'updatedat'],
+                         date_fields=['spenton'])
+
+        if '_links' in json_object:
+            if 'project' in json_object['_links']:
+                if json_object['_links']['project']['href']:
+                    self.project = json_object['_links']['project'].get('title')
+                    self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+            if 'workPackage' in json_object['_links']:
+                if json_object['_links']['workPackage']['href']:
+                    self.workpackage = json_object['_links']['workPackage'].get('title')
+                    self.workpackage_id = int(json_object['_links']['workPackage']['href'].split("/")[-1])
+            if 'user' in json_object['_links']:
+                if json_object['_links']['user']['href']:
+                    self.user = json_object['_links']['user'].get('title')
+                    self.user_id = int(json_object['_links']['user']['href'].split("/")[-1])
+            if 'activity' in json_object['_links']:
+                if json_object['_links']['activity']['href']:
+                    self.activity = json_object['_links']['activity'].get('title')
+                    self.activity_id = int(json_object['_links']['activity']['href'].split("/")[-1])
+
+    def __str__(self):
+        return f"TimeEntry({self.id}): {self.hours} on WP#{self.workpackage_id}"
+
+
+class Activity(GenericType):
+    """A work package activity/journal entry."""
+
+    def __init__(self, json_object=None):
+        self.id = None
+        self.comment = None
+        self.version = None
+        self.createdat = None
+        self.updatedat = None
+
+        self.user = None
+        self.user_id = None
+
+        super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'])
+
+        if '_links' in json_object:
+            if 'user' in json_object['_links']:
+                if json_object['_links']['user']['href']:
+                    self.user = json_object['_links']['user'].get('title')
+                    self.user_id = int(json_object['_links']['user']['href'].split("/")[-1])
+
+    def __str__(self):
+        return f"Activity({self.id}): by {self.user}"
+
+
+class Attachment(GenericType):
+    """A file attachment on a work package or other resource."""
+
+    def __init__(self, json_object=None):
+        self.id = None
+        self.filename = None
+        self.filesize = None
+        self.description = None
+        self.contenttype = None
+        self.digest = None
+        self.createdat = None
+
+        self.author = None
+        self.author_id = None
+        self.container_id = None
+        self.container_type = None
+        self.download_url = None
+
+        super().__init__(json_object, debug=False, datetime_fields=['createdat'])
+
+        if '_links' in json_object:
+            if 'author' in json_object['_links']:
+                if json_object['_links']['author']['href']:
+                    self.author = json_object['_links']['author'].get('title')
+                    self.author_id = int(json_object['_links']['author']['href'].split("/")[-1])
+            if 'container' in json_object['_links']:
+                if json_object['_links']['container']['href']:
+                    parts = json_object['_links']['container']['href'].split("/")
+                    self.container_id = int(parts[-1])
+                    self.container_type = parts[-2]
+            if 'downloadLocation' in json_object['_links']:
+                if json_object['_links']['downloadLocation']['href']:
+                    self.download_url = json_object['_links']['downloadLocation']['href']
+
+    def __str__(self):
+        return f"Attachment({self.id}): {self.filename}"
+
+
+class Notification(GenericType):
+    """An in-app notification."""
+
+    def __init__(self, json_object=None):
+        self.id = None
+        self.subject = None
+        self.reason = None
+        self.readian = None
+        self.createdat = None
+        self.updatedat = None
+
+        self.project = None
+        self.project_id = None
+        self.resource_id = None
+        self.resource_type = None
+        self.actor = None
+        self.actor_id = None
+
+        super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'])
+
+        if '_links' in json_object:
+            if 'project' in json_object['_links']:
+                if json_object['_links']['project']['href']:
+                    self.project = json_object['_links']['project'].get('title')
+                    self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+            if 'resource' in json_object['_links']:
+                if json_object['_links']['resource']['href']:
+                    parts = json_object['_links']['resource']['href'].split("/")
+                    self.resource_id = int(parts[-1])
+                    self.resource_type = parts[-2]
+            if 'actor' in json_object['_links']:
+                if json_object['_links']['actor']['href']:
+                    self.actor = json_object['_links']['actor'].get('title')
+                    self.actor_id = int(json_object['_links']['actor']['href'].split("/")[-1])
+
+    def __str__(self):
+        return f"Notification({self.id}): {self.reason} - {self.subject}"
 
 
 class Collection(GenericType):

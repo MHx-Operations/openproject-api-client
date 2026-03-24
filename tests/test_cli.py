@@ -233,6 +233,84 @@ class TestDispatchRead:
         result = dispatch(client, self._make_args(mode=None))
         assert result is None
 
+    def test_types(self):
+        client = mock.MagicMock()
+        client.get_types.return_value = []
+        dispatch(client, self._make_args(mode='types', project_id=None))
+        client.get_types.assert_called_once()
+
+    def test_types_by_project(self):
+        client = mock.MagicMock()
+        client.get_types_by_project_id.return_value = []
+        dispatch(client, self._make_args(mode='types', project_id=5))
+        client.get_types_by_project_id.assert_called_once_with(5)
+
+    def test_type_single(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='type', id=1))
+        client.get_type.assert_called_once_with(1)
+
+    def test_priorities(self):
+        client = mock.MagicMock()
+        client.get_priorities.return_value = []
+        dispatch(client, self._make_args(mode='priorities'))
+        client.get_priorities.assert_called_once()
+
+    def test_priority_single(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='priority', id=2))
+        client.get_priority.assert_called_once_with(2)
+
+    def test_categories(self):
+        client = mock.MagicMock()
+        client.get_categories_by_project_id.return_value = []
+        dispatch(client, self._make_args(mode='categories', project_id=1))
+        client.get_categories_by_project_id.assert_called_once_with(1)
+
+    def test_category_single(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='category', id=3))
+        client.get_category.assert_called_once_with(3)
+
+    def test_time_entries(self):
+        client = mock.MagicMock()
+        client.get_time_entries.return_value = []
+        dispatch(client, self._make_args(mode='time-entries', work_package_id=None, project_id=None))
+        client.get_time_entries.assert_called_once()
+
+    def test_time_entry_single(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='time-entry', id=50))
+        client.get_time_entry.assert_called_once_with(50)
+
+    def test_activities(self):
+        client = mock.MagicMock()
+        client.get_activities.return_value = []
+        dispatch(client, self._make_args(mode='activities', id=42))
+        client.get_activities.assert_called_once_with(42)
+
+    def test_attachments(self):
+        client = mock.MagicMock()
+        client.get_attachments_by_work_package.return_value = []
+        dispatch(client, self._make_args(mode='attachments', id=42))
+        client.get_attachments_by_work_package.assert_called_once_with(42)
+
+    def test_attachment_single(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='attachment', id=33))
+        client.get_attachment.assert_called_once_with(33)
+
+    def test_notifications(self):
+        client = mock.MagicMock()
+        client.get_notifications.return_value = []
+        dispatch(client, self._make_args(mode='notifications'))
+        client.get_notifications.assert_called_once()
+
+    def test_notification_single(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='notification', id=55))
+        client.get_notification.assert_called_once_with(55)
+
 
 # -- Subcommand routing (write) --------------------------------------------
 
@@ -310,6 +388,73 @@ class TestDispatchWrite:
             from_id=42, to_id=50, relation_type='blocks',
             description="reason", lag=2,
         )
+
+    def test_create_time_entry(self):
+        client = mock.MagicMock()
+        args = self._make_args(
+            mode='create-time-entry',
+            work_package_id=42, hours="PT2H", spent_on="2024-03-15",
+            activity_id=1, comment="worked", project_id=1,
+        )
+        dispatch(client, args)
+        client.create_time_entry.assert_called_once_with(
+            work_package_id=42, hours="PT2H", spent_on="2024-03-15",
+            activity_id=1, comment="worked", project_id=1,
+        )
+
+    def test_update_time_entry_fetches_lock_version(self):
+        client = mock.MagicMock()
+        mock_te = mock.MagicMock()
+        mock_te.lockversion = 1
+        client.get_time_entry.return_value = mock_te
+        args = self._make_args(
+            mode='update-time-entry', id=50,
+            hours="PT3H", spent_on=None, activity_id=None, comment=None,
+        )
+        dispatch(client, args)
+        client.get_time_entry.assert_called_once_with(50)
+        client.update_time_entry.assert_called_once()
+
+    def test_mark_notification_read(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='mark-notification-read', id=55))
+        client.mark_notification_read.assert_called_once_with(55)
+
+    def test_mark_notification_unread(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='mark-notification-unread', id=55))
+        client.mark_notification_unread.assert_called_once_with(55)
+
+    def test_mark_all_notifications_read(self):
+        client = mock.MagicMock()
+        dispatch(client, self._make_args(mode='mark-all-notifications-read'))
+        client.mark_all_notifications_read.assert_called_once()
+
+    def test_delete_work_package(self):
+        client = mock.MagicMock()
+        client.delete_workpackage.return_value = True
+        result = dispatch(client, self._make_args(mode='delete-work-package', id=42))
+        client.delete_workpackage.assert_called_once_with(42)
+        assert result is True
+
+    def test_delete_relation(self):
+        client = mock.MagicMock()
+        client.delete_relation.return_value = True
+        result = dispatch(client, self._make_args(mode='delete-relation', id=100))
+        client.delete_relation.assert_called_once_with(100)
+        assert result is True
+
+    def test_delete_time_entry(self):
+        client = mock.MagicMock()
+        client.delete_time_entry.return_value = True
+        result = dispatch(client, self._make_args(mode='delete-time-entry', id=50))
+        client.delete_time_entry.assert_called_once_with(50)
+
+    def test_delete_attachment(self):
+        client = mock.MagicMock()
+        client.delete_attachment.return_value = True
+        result = dispatch(client, self._make_args(mode='delete-attachment', id=33))
+        client.delete_attachment.assert_called_once_with(33)
 
 
 # -- Output formatting -----------------------------------------------------

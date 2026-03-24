@@ -1,7 +1,7 @@
 # openproject-api-client
 
-Python client and CLI for the OpenProject API v3. Read and write access to projects, work packages,
-relations, versions, users, memberships, statuses, grids, and queries.
+Python client and CLI for the OpenProject API v3. Full read/write/delete access to projects,
+work packages, relations, time entries, notifications, and more.
 
 API documentation: https://www.openproject.org/docs/api/
 
@@ -18,16 +18,16 @@ from openproject_api_client import ApiClient
 
 client = ApiClient("https://openproject.example.com/", "your-api-key")
 
+# discover available types and priorities
+types = client.get_types()           # [Type(1): Task, Type(2): Bug, ...]
+priorities = client.get_priorities() # [Priority(1): Low, Priority(2): High, ...]
+
 # list all projects
 for project in client.get_projects():
     print(project)
 
-# fetch open work packages for a specific project
+# fetch open work packages for a project
 work_packages = client.get_workpackages_by_project_id(46, status='open')
-
-# fetch a single work package with embedded relations
-wp = client.get_workpackage(1155)
-print(wp.relations_in, wp.relations_out)
 
 # create a new work package
 new_wp = client.create_workpackage(
@@ -35,14 +35,21 @@ new_wp = client.create_workpackage(
     type_id=1, assignee_id=3, priority_id=2,
 )
 
-# update status of a work package
+# update status
 client.update_workpackage(new_wp.id, lock_version=new_wp.lockversion, status_id=7)
 
 # add a comment
 client.add_workpackage_comment(new_wp.id, "Done with implementation")
 
+# log time
+client.create_time_entry(new_wp.id, hours="PT2H", spent_on="2024-03-15")
+
 # create a relation
 client.create_relation(from_id=42, to_id=50, relation_type="blocks")
+
+# delete
+client.delete_workpackage(99)
+client.delete_relation(100)
 ```
 
 ## Quick Start (CLI)
@@ -56,15 +63,24 @@ openproject-cli guide
 
 # read
 openproject-cli --json projects
-openproject-cli --json work-packages --project-id 5 --status open
+openproject-cli --json types
+openproject-cli --json priorities
 openproject-cli --json statuses
-openproject-cli --json users
+openproject-cli --json work-packages --project-id 5 --status open
+openproject-cli --json time-entries --work-package-id 42
 
 # write
-openproject-cli create-work-package --project-id 1 --subject "New task" --assignee-id 3
+openproject-cli create-work-package --project-id 1 --subject "New task" --type-id 1
 openproject-cli update-work-package 42 --status-id 7
 openproject-cli add-comment 42 --message "Status update: done"
+openproject-cli create-time-entry --work-package-id 42 --hours PT2H --spent-on 2024-03-15
 openproject-cli create-relation --from-id 42 --to-id 50 --type blocks
+openproject-cli mark-notification-read 55
+
+# delete
+openproject-cli delete-work-package 99
+openproject-cli delete-relation 100
+openproject-cli delete-time-entry 55
 ```
 
 Use `openproject-cli guide` for the full reference including AI-agent workflow.
@@ -79,12 +95,20 @@ Use `openproject-cli guide` for the full reference including AI-agent workflow.
 | `get_workpackages(status, status_ids)` | All work packages, optionally filtered |
 | `get_workpackages_by_project_id(id, status)` | Work packages for a specific project |
 | `get_workpackages_by_query_id(id)` | Work packages from a saved query |
+| `get_type(id)` / `get_types()` | Work package types (Task, Bug, etc.) |
+| `get_types_by_project_id(id)` | Types available in a specific project |
+| `get_priority(id)` / `get_priorities()` | Priority levels |
+| `get_category(id)` / `get_categories_by_project_id(id)` | Work package categories |
 | `get_relation(id)` / `get_relations()` | Relations between work packages |
 | `get_version(id)` / `get_versions()` | Project versions (milestones) |
 | `get_user(id)` / `get_users()` | User accounts |
 | `get_placeholder_user(id)` / `get_placeholder_users()` | Placeholder users |
 | `get_project_member(id)` / `get_project_members()` | Project memberships |
 | `get_status(id)` / `get_statuses()` | Work package statuses |
+| `get_time_entry(id)` / `get_time_entries(wp_id, project_id)` | Time tracking entries |
+| `get_activities(wp_id)` | Work package activities/journal |
+| `get_attachment(id)` / `get_attachments_by_work_package(wp_id)` | File attachments |
+| `get_notification(id)` / `get_notifications()` | In-app notifications |
 | `get_grid(id)` / `get_grids(scope)` | Dashboard grids (boards) |
 | `get_query(id)` | Saved query definition |
 | `get(resource, payload)` | Generic GET for any API v3 endpoint |
@@ -97,103 +121,76 @@ Use `openproject-cli guide` for the full reference including AI-agent workflow.
 | `update_workpackage(id, lock_version, ...)` | Update a work package (optimistic locking) |
 | `add_workpackage_comment(id, message)` | Add a comment/activity to a work package |
 | `create_relation(from_id, to_id, type, ...)` | Create a relation between work packages |
+| `create_time_entry(wp_id, hours, spent_on, ...)` | Log time on a work package |
+| `update_time_entry(id, lock_version, ...)` | Update a time entry |
+| `mark_notification_read(id)` | Mark notification as read |
+| `mark_notification_unread(id)` | Mark notification as unread |
+| `mark_all_notifications_read()` | Mark all notifications as read |
 | `post(resource, body)` | Generic POST for any API v3 endpoint |
 | `patch(resource, body)` | Generic PATCH for any API v3 endpoint |
 
-## CLI Commands
+## Delete Methods
 
-### Read Commands
-
-```
-openproject-cli projects                            List all projects
-openproject-cli work-packages [--status open|closed|all] [--project-id N] [--query-id N]
-openproject-cli work-package <id>                   Get single work package
-openproject-cli statuses                            List all statuses (useful for ID lookup)
-openproject-cli users                               List all users
-openproject-cli versions                            List all versions
-openproject-cli relations                           List all relations
-openproject-cli memberships                         List all memberships
-openproject-cli grids [--scope ...]                 List all grids
-openproject-cli placeholder-users                   List placeholder users
-openproject-cli relation|version|user|placeholder-user|membership|status|grid|query <id>
-```
-
-### Write Commands
-
-```
-openproject-cli create-work-package --project-id N --subject "..." [options]
-openproject-cli update-work-package <id> [--subject "..."] [--status-id N] [options]
-openproject-cli add-comment <id> --message "..."
-openproject-cli create-relation --from-id N --to-id N --type <relation-type> [options]
-```
-
-### Options
-
-- `--json` — Machine-parseable JSON output (recommended for scripts and AI agents)
-- `--baseurl URL` — Override env OPENPROJECT_BASEURL
-- `--apikey KEY` — Override env OPENPROJECT_APIKEY
-- `guide` — Full usage guide (no credentials needed)
+| Method | Description |
+|--------|-------------|
+| `delete_workpackage(id)` | Delete a work package |
+| `delete_relation(id)` | Delete a relation |
+| `delete_time_entry(id)` | Delete a time entry |
+| `delete_attachment(id)` | Delete an attachment |
+| `delete(resource)` | Generic DELETE for any API v3 endpoint |
 
 ## API Coverage
 
-### Supported (Read & Write)
+### Supported (Read / Write / Delete)
 
-| Resource | List | Get | Create | Update | Filter | Notes |
-|----------|:----:|:---:|:------:|:------:|:------:|-------|
-| Projects | :white_check_mark: | :white_check_mark: | — | — | — | Hierarchy paths via `get_projects_dict()` |
-| Work Packages | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | status, project, query | Embedded relations on single fetch |
-| Relations | :white_check_mark: | :white_check_mark: | :white_check_mark: | — | — | Directed (from → to), with lag |
-| Activities | — | — | :white_check_mark: | — | — | Add comments to work packages |
-| Versions | :white_check_mark: | :white_check_mark: | — | — | — | Milestones |
-| Users | :white_check_mark: | :white_check_mark: | — | — | — | |
-| Placeholder Users | :white_check_mark: | :white_check_mark: | — | — | — | |
-| Memberships | :white_check_mark: | :white_check_mark: | — | — | — | Project memberships with roles |
-| Statuses | :white_check_mark: | :white_check_mark: | — | — | — | Work package statuses |
-| Grids | :white_check_mark: | :white_check_mark: | — | — | scope | Boards / dashboards with widgets |
-| Queries | — | :white_check_mark: | — | — | — | Saved query with embedded results |
+| Resource | List | Get | Create | Update | Delete | Filter | Notes |
+|----------|:----:|:---:|:------:|:------:|:------:|:------:|-------|
+| Projects | :white_check_mark: | :white_check_mark: | — | — | — | — | Hierarchy paths via `get_projects_dict()` |
+| Work Packages | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | status, project, query | Embedded relations on single fetch |
+| Relations | :white_check_mark: | :white_check_mark: | :white_check_mark: | — | :white_check_mark: | — | Directed (from → to), with lag |
+| Types | :white_check_mark: | :white_check_mark: | — | — | — | project | Work package types (Task, Bug, etc.) |
+| Priorities | :white_check_mark: | :white_check_mark: | — | — | — | — | Priority levels |
+| Categories | :white_check_mark: | :white_check_mark: | — | — | — | project | Work package categories |
+| Time Entries | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | wp, project | Time tracking |
+| Activities | :white_check_mark: | — | :white_check_mark: | — | — | wp | Comments / journal entries |
+| Attachments | :white_check_mark: | :white_check_mark: | — | — | :white_check_mark: | wp | File attachments |
+| Notifications | :white_check_mark: | :white_check_mark: | — | :white_check_mark: | — | — | Read/unread state |
+| Versions | :white_check_mark: | :white_check_mark: | — | — | — | — | Milestones |
+| Users | :white_check_mark: | :white_check_mark: | — | — | — | — | |
+| Placeholder Users | :white_check_mark: | :white_check_mark: | — | — | — | — | |
+| Memberships | :white_check_mark: | :white_check_mark: | — | — | — | — | With roles |
+| Statuses | :white_check_mark: | :white_check_mark: | — | — | — | — | |
+| Grids | :white_check_mark: | :white_check_mark: | — | — | — | scope | Boards / dashboards |
+| Queries | — | :white_check_mark: | — | — | — | — | Saved queries |
 
 ### Not yet supported
 
-| Resource | API Operations | Priority | Notes |
-|----------|---------------|----------|-------|
-| Types | GET | High | Work package types (Task, Bug, etc.) — needed for type ID lookup |
-| Priorities | GET | High | Priority levels — needed for priority ID lookup |
-| Time Entries | GET, POST, PATCH, DELETE | High | Time tracking |
-| Attachments | GET, POST, DELETE | Medium | File attachments |
-| Categories | GET | Medium | Work package categories |
-| Budgets | GET | Medium | Project budgets |
-| Notifications | GET, PATCH | Medium | In-app notifications |
-| Activities | GET | Medium | Read work package journal/history |
-| Custom Actions | GET, PATCH, DELETE, Execute | Low | Custom workflow actions |
-| Custom Fields / Options | GET, PATCH, DELETE | Low | Custom field definitions |
-| Days / Work Schedule | GET, PATCH | Low | Working/non-working days |
-| Documents | GET | Low | Project documents |
-| File Links | GET, PATCH, DELETE | Low | External storage links |
-| Groups | GET, POST, PATCH, DELETE | Low | User groups |
-| Help Texts | GET | Low | Attribute help texts |
-| Meetings | GET | Low | Meeting resources |
-| News | GET | Low | Project news |
-| OAuth | GET, POST, DELETE | Low | OAuth applications/credentials |
-| Portfolios | GET, POST, PATCH, DELETE | Low | Project portfolios |
-| Posts | GET | Low | Forum posts |
-| Principals | GET | Low | Users, groups, placeholder users |
-| Programs | GET, POST, PATCH, DELETE | Low | Programs |
-| Project Storages | GET, POST, PATCH, DELETE | Low | Project ↔ storage links |
-| Reminders | GET, POST, DELETE | Low | Work package reminders |
-| Rendering | POST | Low | Markdown/plain text rendering |
-| Revisions | GET | Low | SCM revisions |
-| Roles | GET | Low | Permission roles |
-| Storages | GET, POST, PATCH, DELETE | Low | External file storages (Nextcloud, etc.) |
-| Views | GET, PATCH, DELETE | Low | Saved views |
-| Wiki Pages | GET, PATCH, DELETE | Low | Wiki content |
-| Workspaces | GET | Low | Projects (OpenProject 17+) |
-
-### Still missing for full write workflow
-
-- **DELETE** operations (work packages, relations, etc.)
-- **Types endpoint** (GET) — for looking up type IDs when creating work packages
-- **Priorities endpoint** (GET) — for looking up priority IDs
-- **Time Entries** — for time tracking workflows
+| Resource | Priority | Notes |
+|----------|----------|-------|
+| Budgets | Medium | Project budgets |
+| Custom Actions | Low | Custom workflow actions |
+| Custom Fields / Options | Low | Custom field definitions |
+| Days / Work Schedule | Low | Working/non-working days |
+| Documents | Low | Project documents |
+| File Links | Low | External storage links |
+| Groups | Low | User groups |
+| Help Texts | Low | Attribute help texts |
+| Meetings | Low | Meeting resources |
+| News | Low | Project news |
+| OAuth | Low | OAuth applications/credentials |
+| Portfolios | Low | Project portfolios |
+| Posts | Low | Forum posts |
+| Principals | Low | Users, groups, placeholder users |
+| Programs | Low | Programs |
+| Project Storages | Low | Project ↔ storage links |
+| Reminders | Low | Work package reminders |
+| Rendering | Low | Markdown/plain text rendering |
+| Revisions | Low | SCM revisions |
+| Roles | Low | Permission roles |
+| Storages | Low | External file storages |
+| Views | Low | Saved views |
+| Wiki Pages | Low | Wiki content |
+| Workspaces | Low | Projects (OpenProject 17+) |
 
 ## OpenProject Compatibility
 

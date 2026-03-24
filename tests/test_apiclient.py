@@ -7,13 +7,20 @@ import responses
 
 from openproject_api_client.apiclient import ApiClient, ApiError, RequestError
 from openproject_api_client.resources import (
+    Activity,
+    Attachment,
+    Category,
     Collection,
     GenericType,
     Membership,
+    Notification,
     PlaceholderUser,
+    Priority,
     Project,
     Relation,
     Status,
+    TimeEntry,
+    Type,
     User,
     Version,
     WorkPackage,
@@ -721,3 +728,239 @@ class TestCreateRelation:
         body = json.loads(responses.calls[0].request.body)
         assert body["description"] == "wait"
         assert body["lag"] == 3
+
+
+# -- DELETE ----------------------------------------------------------------
+
+class TestHttpDelete:
+    @responses.activate
+    def test_sends_delete(self):
+        responses.add(
+            responses.DELETE,
+            f"{BASE_URL}api/v3/work_packages/42",
+            status=204,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        resp = client.http_delete("work_packages/42")
+        assert resp.status_code == 204
+
+    @responses.activate
+    def test_delete_returns_true(self):
+        responses.add(responses.DELETE, f"{BASE_URL}api/v3/work_packages/42", status=204)
+        client = ApiClient(BASE_URL, API_KEY)
+        assert client.delete("work_packages/42") is True
+
+    @responses.activate
+    def test_delete_error_raises(self):
+        responses.add(responses.DELETE, f"{BASE_URL}api/v3/work_packages/999", status=404)
+        client = ApiClient(BASE_URL, API_KEY)
+        with pytest.raises(RequestError, match="404"):
+            client.delete("work_packages/999")
+
+    @responses.activate
+    def test_delete_workpackage(self):
+        responses.add(responses.DELETE, f"{BASE_URL}api/v3/work_packages/42", status=204)
+        client = ApiClient(BASE_URL, API_KEY)
+        assert client.delete_workpackage(42) is True
+
+    @responses.activate
+    def test_delete_relation(self):
+        responses.add(responses.DELETE, f"{BASE_URL}api/v3/relations/100", status=204)
+        client = ApiClient(BASE_URL, API_KEY)
+        assert client.delete_relation(100) is True
+
+    @responses.activate
+    def test_delete_attachment(self):
+        responses.add(responses.DELETE, f"{BASE_URL}api/v3/attachments/33", status=204)
+        client = ApiClient(BASE_URL, API_KEY)
+        assert client.delete_attachment(33) is True
+
+    @responses.activate
+    def test_delete_time_entry(self):
+        responses.add(responses.DELETE, f"{BASE_URL}api/v3/time_entries/50", status=204)
+        client = ApiClient(BASE_URL, API_KEY)
+        assert client.delete_time_entry(50) is True
+
+
+# -- New read endpoints ----------------------------------------------------
+
+class TestNewReadEndpoints:
+    @responses.activate
+    def test_get_types(self, type_json):
+        coll = make_collection("Collection", [type_json], total=1, offset=1, page_size=100)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/types", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        types = client.get_types()
+        assert len(types) == 1
+        assert isinstance(types[0], Type)
+        assert types[0].name == "Task"
+
+    @responses.activate
+    def test_get_type(self, type_json):
+        responses.add(responses.GET, f"{BASE_URL}api/v3/types/1", json=type_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        t = client.get_type(1)
+        assert isinstance(t, Type)
+
+    @responses.activate
+    def test_get_types_by_project(self, type_json):
+        coll = make_collection("Collection", [type_json], total=1, offset=1, page_size=100)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/projects/1/types", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        types = client.get_types_by_project_id(1)
+        assert len(types) == 1
+
+    @responses.activate
+    def test_get_priorities(self, priority_json):
+        coll = make_collection("Collection", [priority_json], total=1, offset=1, page_size=100)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/priorities", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        prios = client.get_priorities()
+        assert len(prios) == 1
+        assert isinstance(prios[0], Priority)
+
+    @responses.activate
+    def test_get_priority(self, priority_json):
+        responses.add(responses.GET, f"{BASE_URL}api/v3/priorities/2", json=priority_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        p = client.get_priority(2)
+        assert isinstance(p, Priority)
+
+    @responses.activate
+    def test_get_categories(self, category_json):
+        coll = make_collection("Collection", [category_json], total=1, offset=1, page_size=100)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/projects/1/categories", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        cats = client.get_categories_by_project_id(1)
+        assert len(cats) == 1
+        assert isinstance(cats[0], Category)
+
+    @responses.activate
+    def test_get_category(self, category_json):
+        responses.add(responses.GET, f"{BASE_URL}api/v3/categories/3", json=category_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        c = client.get_category(3)
+        assert isinstance(c, Category)
+
+    @responses.activate
+    def test_get_time_entries(self, time_entry_json):
+        coll = make_collection("Collection", [time_entry_json], total=1, offset=1, page_size=100)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/time_entries", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        entries = client.get_time_entries()
+        assert len(entries) == 1
+        assert isinstance(entries[0], TimeEntry)
+
+    @responses.activate
+    def test_get_time_entries_filtered(self, time_entry_json):
+        coll = make_collection("Collection", [time_entry_json], total=1, offset=1, page_size=100)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/time_entries", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        client.get_time_entries(work_package_id=42)
+        assert "filters" in responses.calls[0].request.url
+
+    @responses.activate
+    def test_get_time_entry(self, time_entry_json):
+        responses.add(responses.GET, f"{BASE_URL}api/v3/time_entries/50", json=time_entry_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        te = client.get_time_entry(50)
+        assert isinstance(te, TimeEntry)
+
+    @responses.activate
+    def test_get_notification(self, notification_json):
+        responses.add(responses.GET, f"{BASE_URL}api/v3/notifications/55", json=notification_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        n = client.get_notification(55)
+        assert isinstance(n, Notification)
+
+    @responses.activate
+    def test_get_notifications(self, notification_json):
+        coll = make_collection("Collection", [notification_json], total=1, offset=1, page_size=100)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/notifications", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        notifs = client.get_notifications()
+        assert len(notifs) == 1
+
+    @responses.activate
+    def test_get_attachment(self, attachment_json):
+        responses.add(responses.GET, f"{BASE_URL}api/v3/attachments/33", json=attachment_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        a = client.get_attachment(33)
+        assert isinstance(a, Attachment)
+
+    @responses.activate
+    def test_get_activities(self, activity_json):
+        coll = make_collection("Collection", [activity_json], total=1, offset=1, page_size=5)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/work_packages/42/activities", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        acts = client.get_activities(42)
+        assert len(acts) == 1
+
+    @responses.activate
+    def test_get_attachments_by_wp(self, attachment_json):
+        coll = make_collection("Collection", [attachment_json], total=1, offset=1, page_size=5)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/work_packages/42/attachments", json=coll, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        atts = client.get_attachments_by_work_package(42)
+        assert len(atts) == 1
+
+
+# -- Time entry write methods -----------------------------------------------
+
+class TestTimeEntryWrite:
+    @responses.activate
+    def test_create_time_entry(self, time_entry_json):
+        responses.add(responses.POST, f"{BASE_URL}api/v3/time_entries", json=time_entry_json, status=201)
+        client = ApiClient(BASE_URL, API_KEY)
+        te = client.create_time_entry(42, "PT2H", "2024-03-15", comment="worked on it")
+        assert isinstance(te, TimeEntry)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["hours"] == "PT2H"
+        assert body["spentOn"] == "2024-03-15"
+        assert body["comment"]["raw"] == "worked on it"
+        assert body["_links"]["workPackage"]["href"] == "/api/v3/work_packages/42"
+
+    @responses.activate
+    def test_create_time_entry_with_activity(self, time_entry_json):
+        responses.add(responses.POST, f"{BASE_URL}api/v3/time_entries", json=time_entry_json, status=201)
+        client = ApiClient(BASE_URL, API_KEY)
+        client.create_time_entry(42, "PT1H", "2024-03-15", activity_id=5, project_id=1)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["_links"]["activity"]["href"] == "/api/v3/time_entries/activities/5"
+        assert body["_links"]["project"]["href"] == "/api/v3/projects/1"
+
+    @responses.activate
+    def test_update_time_entry(self, time_entry_json):
+        responses.add(responses.PATCH, f"{BASE_URL}api/v3/time_entries/50", json=time_entry_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        client.update_time_entry(50, lock_version=1, hours="PT3H")
+        body = json.loads(responses.calls[0].request.body)
+        assert body["lockVersion"] == 1
+        assert body["hours"] == "PT3H"
+
+
+# -- Notification write methods ---------------------------------------------
+
+class TestNotificationWrite:
+    @responses.activate
+    def test_mark_read(self, notification_json):
+        notification_json["readIAN"] = True
+        responses.add(responses.PATCH, f"{BASE_URL}api/v3/notifications/55", json=notification_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        n = client.mark_notification_read(55)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["readIAN"] is True
+
+    @responses.activate
+    def test_mark_unread(self, notification_json):
+        responses.add(responses.PATCH, f"{BASE_URL}api/v3/notifications/55", json=notification_json, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        client.mark_notification_unread(55)
+        body = json.loads(responses.calls[0].request.body)
+        assert body["readIAN"] is False
+
+    @responses.activate
+    def test_mark_all_read(self):
+        responses.add(responses.POST, f"{BASE_URL}api/v3/notifications/read_ian", status=204)
+        client = ApiClient(BASE_URL, API_KEY)
+        assert client.mark_all_notifications_read() is True

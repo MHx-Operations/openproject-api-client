@@ -318,6 +318,122 @@ def query_json():
     }
 
 
+@pytest.fixture
+def type_json():
+    return {
+        "_type": "Type",
+        "id": 1,
+        "name": "Task",
+        "color": "#1A67A3",
+        "position": 1,
+        "isDefault": True,
+        "isMilestone": False,
+        "createdAt": "2023-01-01T00:00:00+00:00",
+        "updatedAt": "2023-01-01T00:00:00+00:00",
+    }
+
+
+@pytest.fixture
+def priority_json():
+    return {
+        "_type": "Priority",
+        "id": 2,
+        "name": "High",
+        "color": "#FF0000",
+        "position": 2,
+        "isActive": True,
+        "isDefault": False,
+        "createdAt": "2023-01-01T00:00:00+00:00",
+        "updatedAt": "2023-01-01T00:00:00+00:00",
+    }
+
+
+@pytest.fixture
+def category_json():
+    return {
+        "_type": "Category",
+        "id": 3,
+        "name": "Backend",
+        "_links": {
+            "project": {"href": "/api/v3/projects/1", "title": "My Project"},
+            "defaultAssignee": {"href": "/api/v3/users/3", "title": "Alice Smith"},
+        },
+    }
+
+
+@pytest.fixture
+def time_entry_json():
+    return {
+        "_type": "TimeEntry",
+        "id": 50,
+        "hours": "PT2H",
+        "comment": {"raw": "worked on it"},
+        "spentOn": "2024-03-15",
+        "ongoing": False,
+        "lockVersion": 1,
+        "createdAt": "2024-03-15T10:00:00+00:00",
+        "updatedAt": "2024-03-15T10:00:00+00:00",
+        "_links": {
+            "project": {"href": "/api/v3/projects/1", "title": "My Project"},
+            "workPackage": {"href": "/api/v3/work_packages/42", "title": "Fix the widget"},
+            "user": {"href": "/api/v3/users/3", "title": "Alice Smith"},
+            "activity": {"href": "/api/v3/time_entries/activities/1", "title": "Development"},
+        },
+    }
+
+
+@pytest.fixture
+def activity_json():
+    return {
+        "_type": "Activity",
+        "id": 200,
+        "comment": {"raw": "Changed status"},
+        "version": 3,
+        "createdAt": "2024-03-15T10:00:00+00:00",
+        "updatedAt": "2024-03-15T10:00:00+00:00",
+        "_links": {
+            "user": {"href": "/api/v3/users/3", "title": "Alice Smith"},
+        },
+    }
+
+
+@pytest.fixture
+def attachment_json():
+    return {
+        "_type": "Attachment",
+        "id": 33,
+        "fileName": "screenshot.png",
+        "fileSize": 12345,
+        "description": {"raw": "a screenshot"},
+        "contentType": "image/png",
+        "digest": {"algorithm": "md5", "hash": "abc123"},
+        "createdAt": "2024-03-15T10:00:00+00:00",
+        "_links": {
+            "author": {"href": "/api/v3/users/3", "title": "Alice Smith"},
+            "container": {"href": "/api/v3/work_packages/42"},
+            "downloadLocation": {"href": "https://op.example.com/attachments/33/screenshot.png"},
+        },
+    }
+
+
+@pytest.fixture
+def notification_json():
+    return {
+        "_type": "Notification",
+        "id": 55,
+        "subject": "WP updated",
+        "reason": "assigned",
+        "readIAN": False,
+        "createdAt": "2024-03-15T10:00:00+00:00",
+        "updatedAt": "2024-03-15T10:00:00+00:00",
+        "_links": {
+            "project": {"href": "/api/v3/projects/1", "title": "My Project"},
+            "resource": {"href": "/api/v3/work_packages/42"},
+            "actor": {"href": "/api/v3/users/3", "title": "Alice Smith"},
+        },
+    }
+
+
 def make_collection(element_type, elements, total=None, offset=1, page_size=5):
     """Helper to build a Collection JSON envelope."""
     if total is None:

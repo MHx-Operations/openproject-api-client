@@ -5,16 +5,23 @@ import datetime
 import pytest
 
 from openproject_api_client.resources import (
+    Activity,
+    Attachment,
+    Category,
     Collection,
     GenericType,
     Grid,
     GridWidget,
     Membership,
+    Notification,
     PlaceholderUser,
+    Priority,
     Project,
     Query,
     Relation,
     Status,
+    TimeEntry,
+    Type,
     User,
     Version,
     WorkPackage,
@@ -564,3 +571,128 @@ class TestWorkPackageCollection:
         items = list(wpc)
         assert len(items) == 1
         assert isinstance(items[0], WorkPackage)
+
+
+# -- Type ------------------------------------------------------------------
+
+class TestType:
+    def test_from_json(self, type_json):
+        t = Type(type_json)
+        assert t.id == 1
+        assert t.name == "Task"
+        assert t.color == "#1A67A3"
+        assert t.position == 1
+        assert t.isdefault is True
+        assert t.ismilestone is False
+
+    def test_str(self, type_json):
+        assert "Task" in str(Type(type_json))
+
+
+# -- Priority --------------------------------------------------------------
+
+class TestPriority:
+    def test_from_json(self, priority_json):
+        p = Priority(priority_json)
+        assert p.id == 2
+        assert p.name == "High"
+        assert p.color == "#FF0000"
+        assert p.position == 2
+        assert p.isactive is True
+        assert p.isdefault is False
+
+    def test_str(self, priority_json):
+        assert "High" in str(Priority(priority_json))
+
+
+# -- Category --------------------------------------------------------------
+
+class TestCategory:
+    def test_from_json(self, category_json):
+        c = Category(category_json)
+        assert c.id == 3
+        assert c.name == "Backend"
+        assert c.project == "My Project"
+        assert c.project_id == 1
+        assert c.defaultassignee == "Alice Smith"
+        assert c.defaultassignee_id == 3
+
+    def test_str(self, category_json):
+        assert "Backend" in str(Category(category_json))
+
+
+# -- TimeEntry -------------------------------------------------------------
+
+class TestTimeEntry:
+    def test_from_json(self, time_entry_json):
+        te = TimeEntry(time_entry_json)
+        assert te.id == 50
+        assert te.hours == "PT2H"
+        assert te.ongoing is False
+        assert te.project == "My Project"
+        assert te.project_id == 1
+        assert te.workpackage == "Fix the widget"
+        assert te.workpackage_id == 42
+        assert te.user == "Alice Smith"
+        assert te.user_id == 3
+        assert te.activity == "Development"
+        assert te.activity_id == 1
+
+    def test_str(self, time_entry_json):
+        s = str(TimeEntry(time_entry_json))
+        assert "50" in s
+        assert "42" in s
+
+
+# -- Activity --------------------------------------------------------------
+
+class TestActivity:
+    def test_from_json(self, activity_json):
+        a = Activity(activity_json)
+        assert a.id == 200
+        assert a.version == 3
+        assert a.user == "Alice Smith"
+        assert a.user_id == 3
+
+    def test_str(self, activity_json):
+        assert "Alice Smith" in str(Activity(activity_json))
+
+
+# -- Attachment ------------------------------------------------------------
+
+class TestAttachment:
+    def test_from_json(self, attachment_json):
+        a = Attachment(attachment_json)
+        assert a.id == 33
+        assert a.filename == "screenshot.png"
+        assert a.filesize == 12345
+        assert a.contenttype == "image/png"
+        assert a.author == "Alice Smith"
+        assert a.author_id == 3
+        assert a.container_id == 42
+        assert a.container_type == "work_packages"
+        assert "screenshot.png" in a.download_url
+
+    def test_str(self, attachment_json):
+        assert "screenshot.png" in str(Attachment(attachment_json))
+
+
+# -- Notification ----------------------------------------------------------
+
+class TestNotification:
+    def test_from_json(self, notification_json):
+        n = Notification(notification_json)
+        assert n.id == 55
+        assert n.subject == "WP updated"
+        assert n.reason == "assigned"
+        assert n.readian is False
+        assert n.project == "My Project"
+        assert n.project_id == 1
+        assert n.resource_id == 42
+        assert n.resource_type == "work_packages"
+        assert n.actor == "Alice Smith"
+        assert n.actor_id == 3
+
+    def test_str(self, notification_json):
+        s = str(Notification(notification_json))
+        assert "assigned" in s

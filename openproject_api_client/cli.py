@@ -26,17 +26,28 @@ READ COMMANDS
   openproject-cli work-packages --project-id 5      Filter by project
   openproject-cli work-packages --query-id 99       Use a saved query
   openproject-cli work-package 42                   Get single work package by ID
+  openproject-cli types                             List all work package types
+  openproject-cli types --project-id 5              Types available in a project
+  openproject-cli priorities                        List all priorities
   openproject-cli statuses                          List all statuses (get IDs for updates)
+  openproject-cli categories --project-id 5         List categories for a project
   openproject-cli users                             List all users (get IDs for assignments)
   openproject-cli versions                          List all versions/milestones
   openproject-cli relations                         List all relations
   openproject-cli memberships                       List all project memberships
+  openproject-cli time-entries                      List all time entries
+  openproject-cli time-entries --work-package-id 42 Filter by work package
+  openproject-cli time-entries --project-id 5       Filter by project
+  openproject-cli activities 42                     List activities for a work package
+  openproject-cli attachments 42                    List attachments for a work package
+  openproject-cli notifications                     List notifications
   openproject-cli grids                             List all grids/boards
   openproject-cli grids --scope /projects/1/boards  Filter grids by scope
   openproject-cli placeholder-users                 List placeholder users
 
-  Single-resource variants: relation, version, user, placeholder-user,
-                            membership, status, grid, query
+  Single-resource: relation, version, user, placeholder-user, membership,
+                   status, grid, query, type, priority, category,
+                   time-entry, attachment, notification
 
 WRITE COMMANDS
   openproject-cli create-work-package --project-id 1 --subject "Title" \\
@@ -47,24 +58,37 @@ WRITE COMMANDS
       [--description "markdown text"] [--schedule-manually]
 
   openproject-cli update-work-package 42 \\
-      [--subject "New title"] [--status-id N] [--assignee-id N] \\
-      [--responsible-id N] [--priority-id N] [--version-id N] \\
-      [--parent-id N] [--type-id N] [--category-id N] [--budget-id N] \\
-      [--start-date YYYY-MM-DD] [--due-date YYYY-MM-DD] \\
-      [--estimated-time PT8H] [--remaining-time PT2H] \\
-      [--percentage-done 75] [--description "text"] [--schedule-manually]
-      Note: lock-version is fetched automatically from the work package.
+      [--subject "New title"] [--status-id N] [--assignee-id N] ...
+      Note: lock-version is fetched automatically.
 
   openproject-cli add-comment 42 --message "Status update: done with testing"
 
   openproject-cli create-relation --from-id 42 --to-id 50 --type blocks \\
       [--description "reason"] [--lag 2]
 
+  openproject-cli create-time-entry --work-package-id 42 --hours PT2H \\
+      --spent-on 2024-03-15 [--activity-id N] [--comment "text"]
+
+  openproject-cli update-time-entry 100 \\
+      [--hours PT3H] [--spent-on 2024-03-16] [--comment "text"]
+
+  openproject-cli mark-notification-read 55
+  openproject-cli mark-notification-unread 55
+  openproject-cli mark-all-notifications-read
+
+DELETE COMMANDS
+  openproject-cli delete-work-package 42
+  openproject-cli delete-relation 100
+  openproject-cli delete-time-entry 55
+  openproject-cli delete-attachment 33
+
 TYPICAL AI-AGENT WORKFLOW
   1. Discover context:
-     openproject-cli --json statuses          # get status IDs
-     openproject-cli --json users             # get user IDs
-     openproject-cli --json projects          # get project IDs
+     openproject-cli --json types              # get type IDs (Task, Bug, ...)
+     openproject-cli --json priorities          # get priority IDs
+     openproject-cli --json statuses            # get status IDs
+     openproject-cli --json users               # get user IDs
+     openproject-cli --json projects            # get project IDs
 
   2. Read work packages:
      openproject-cli --json work-packages --project-id 5 --status open
@@ -79,7 +103,11 @@ TYPICAL AI-AGENT WORKFLOW
      openproject-cli --json create-work-package --project-id 5 \\
          --subject "Implement Y" --type-id 1 --assignee-id 3
 
-  6. Create relation:
+  6. Log time:
+     openproject-cli --json create-time-entry --work-package-id 42 \\
+         --hours PT2H --spent-on 2024-03-15
+
+  7. Create relation:
      openproject-cli create-relation --from-id 42 --to-id 50 --type blocks
 
 RELATION TYPES
@@ -92,6 +120,7 @@ TIME FORMAT
 EXIT CODES
   0  Success
   1  API error or request failure
+  2  Deleted successfully (delete commands, text mode)
 """)
 
 
@@ -125,6 +154,23 @@ def main():
     sp_wp_single = subparsers.add_parser('work-package', help='get a single work package')
     sp_wp_single.add_argument('id', type=int, help='work package id')
 
+    sp_types = subparsers.add_parser('types', help='list all work package types')
+    sp_types.add_argument('--project-id', type=int, help='filter by project id')
+
+    sp_type = subparsers.add_parser('type', help='get a single type')
+    sp_type.add_argument('id', type=int, help='type id')
+
+    subparsers.add_parser('priorities', help='list all priorities')
+
+    sp_priority = subparsers.add_parser('priority', help='get a single priority')
+    sp_priority.add_argument('id', type=int, help='priority id')
+
+    sp_categories = subparsers.add_parser('categories', help='list categories for a project')
+    sp_categories.add_argument('--project-id', type=int, required=True, help='project id')
+
+    sp_category = subparsers.add_parser('category', help='get a single category')
+    sp_category.add_argument('id', type=int, help='category id')
+
     subparsers.add_parser('relations', help='list all relations')
 
     sp_relation = subparsers.add_parser('relation', help='get a single relation')
@@ -154,6 +200,27 @@ def main():
 
     sp_status = subparsers.add_parser('status', help='get a single status')
     sp_status.add_argument('id', type=int, help='status id')
+
+    sp_time_entries = subparsers.add_parser('time-entries', help='list time entries')
+    sp_time_entries.add_argument('--work-package-id', type=int, help='filter by work package')
+    sp_time_entries.add_argument('--project-id', type=int, help='filter by project')
+
+    sp_time_entry = subparsers.add_parser('time-entry', help='get a single time entry')
+    sp_time_entry.add_argument('id', type=int, help='time entry id')
+
+    sp_activities = subparsers.add_parser('activities', help='list activities for a work package')
+    sp_activities.add_argument('id', type=int, help='work package id')
+
+    sp_attachments = subparsers.add_parser('attachments', help='list attachments for a work package')
+    sp_attachments.add_argument('id', type=int, help='work package id')
+
+    sp_attachment = subparsers.add_parser('attachment', help='get a single attachment')
+    sp_attachment.add_argument('id', type=int, help='attachment id')
+
+    subparsers.add_parser('notifications', help='list notifications')
+
+    sp_notification = subparsers.add_parser('notification', help='get a single notification')
+    sp_notification.add_argument('id', type=int, help='notification id')
 
     sp_grids = subparsers.add_parser('grids', help='list all grids')
     sp_grids.add_argument('--scope', help='filter by scope')
@@ -211,7 +278,7 @@ def main():
     sp_comment.add_argument('id', type=int, help='work package id')
     sp_comment.add_argument('--message', required=True, help='comment text (markdown)')
 
-    sp_create_rel = subparsers.add_parser('create-relation', help='create a relation between work packages')
+    sp_create_rel = subparsers.add_parser('create-relation', help='create a relation')
     sp_create_rel.add_argument('--from-id', type=int, required=True, help='source work package id')
     sp_create_rel.add_argument('--to-id', type=int, required=True, help='target work package id')
     sp_create_rel.add_argument('--type', required=True, dest='relation_type',
@@ -220,6 +287,43 @@ def main():
                                help='relation type')
     sp_create_rel.add_argument('--description', help='relation description')
     sp_create_rel.add_argument('--lag', type=int, help='lag in days (for precedes/follows)')
+
+    sp_create_te = subparsers.add_parser('create-time-entry', help='create a time entry')
+    sp_create_te.add_argument('--work-package-id', type=int, required=True, help='work package id')
+    sp_create_te.add_argument('--hours', required=True, help='hours (e.g. PT2H, PT30M)')
+    sp_create_te.add_argument('--spent-on', required=True, help='date (YYYY-MM-DD)')
+    sp_create_te.add_argument('--activity-id', type=int, help='time entry activity id')
+    sp_create_te.add_argument('--comment', help='comment')
+    sp_create_te.add_argument('--project-id', type=int, help='project id')
+
+    sp_update_te = subparsers.add_parser('update-time-entry', help='update a time entry')
+    sp_update_te.add_argument('id', type=int, help='time entry id')
+    sp_update_te.add_argument('--hours', help='hours (e.g. PT2H)')
+    sp_update_te.add_argument('--spent-on', help='date (YYYY-MM-DD)')
+    sp_update_te.add_argument('--activity-id', type=int, help='time entry activity id')
+    sp_update_te.add_argument('--comment', help='comment')
+
+    sp_notif_read = subparsers.add_parser('mark-notification-read', help='mark notification as read')
+    sp_notif_read.add_argument('id', type=int, help='notification id')
+
+    sp_notif_unread = subparsers.add_parser('mark-notification-unread', help='mark notification as unread')
+    sp_notif_unread.add_argument('id', type=int, help='notification id')
+
+    subparsers.add_parser('mark-all-notifications-read', help='mark all notifications as read')
+
+    # -- delete commands ---------------------------------------------------
+
+    sp_del_wp = subparsers.add_parser('delete-work-package', help='delete a work package')
+    sp_del_wp.add_argument('id', type=int, help='work package id')
+
+    sp_del_rel = subparsers.add_parser('delete-relation', help='delete a relation')
+    sp_del_rel.add_argument('id', type=int, help='relation id')
+
+    sp_del_te = subparsers.add_parser('delete-time-entry', help='delete a time entry')
+    sp_del_te.add_argument('id', type=int, help='time entry id')
+
+    sp_del_att = subparsers.add_parser('delete-attachment', help='delete an attachment')
+    sp_del_att.add_argument('id', type=int, help='attachment id')
 
     args = parser.parse_args()
 
@@ -248,7 +352,13 @@ def main():
 
     try:
         result = dispatch(client, args)
-        if result is not None:
+        if result is True:
+            # delete operations return True
+            if args.json:
+                print(json.dumps({"deleted": True}))
+            else:
+                print("deleted")
+        elif result is not None:
             if args.json:
                 json_out(result)
             else:
@@ -277,6 +387,26 @@ def dispatch(client, args):
 
     elif mode == 'work-package':
         return client.get_workpackage(args.id)
+
+    elif mode == 'types':
+        if args.project_id:
+            return client.get_types_by_project_id(args.project_id)
+        return client.get_types()
+
+    elif mode == 'type':
+        return client.get_type(args.id)
+
+    elif mode == 'priorities':
+        return client.get_priorities()
+
+    elif mode == 'priority':
+        return client.get_priority(args.id)
+
+    elif mode == 'categories':
+        return client.get_categories_by_project_id(args.project_id)
+
+    elif mode == 'category':
+        return client.get_category(args.id)
 
     elif mode == 'relations':
         return client.get_relations()
@@ -314,6 +444,30 @@ def dispatch(client, args):
     elif mode == 'status':
         return client.get_status(args.id)
 
+    elif mode == 'time-entries':
+        return client.get_time_entries(
+            work_package_id=args.work_package_id,
+            project_id=args.project_id,
+        )
+
+    elif mode == 'time-entry':
+        return client.get_time_entry(args.id)
+
+    elif mode == 'activities':
+        return client.get_activities(args.id)
+
+    elif mode == 'attachments':
+        return client.get_attachments_by_work_package(args.id)
+
+    elif mode == 'attachment':
+        return client.get_attachment(args.id)
+
+    elif mode == 'notifications':
+        return client.get_notifications()
+
+    elif mode == 'notification':
+        return client.get_notification(args.id)
+
     elif mode == 'grids':
         return client.get_grids(scope=args.scope)
 
@@ -340,7 +494,6 @@ def dispatch(client, args):
         )
 
     elif mode == 'update-work-package':
-        # auto-fetch lock version
         wp = client.get_workpackage(args.id)
         return client.update_workpackage(
             workpackage_id=args.id, lock_version=wp.lockversion,
@@ -367,6 +520,44 @@ def dispatch(client, args):
             relation_type=args.relation_type,
             description=args.description, lag=args.lag,
         )
+
+    elif mode == 'create-time-entry':
+        return client.create_time_entry(
+            work_package_id=args.work_package_id,
+            hours=args.hours, spent_on=args.spent_on,
+            activity_id=args.activity_id, comment=args.comment,
+            project_id=args.project_id,
+        )
+
+    elif mode == 'update-time-entry':
+        te = client.get_time_entry(args.id)
+        return client.update_time_entry(
+            entry_id=args.id, lock_version=te.lockversion,
+            hours=args.hours, spent_on=args.spent_on,
+            activity_id=args.activity_id, comment=args.comment,
+        )
+
+    elif mode == 'mark-notification-read':
+        return client.mark_notification_read(args.id)
+
+    elif mode == 'mark-notification-unread':
+        return client.mark_notification_unread(args.id)
+
+    elif mode == 'mark-all-notifications-read':
+        return client.mark_all_notifications_read()
+
+    # delete commands
+    elif mode == 'delete-work-package':
+        return client.delete_workpackage(args.id)
+
+    elif mode == 'delete-relation':
+        return client.delete_relation(args.id)
+
+    elif mode == 'delete-time-entry':
+        return client.delete_time_entry(args.id)
+
+    elif mode == 'delete-attachment':
+        return client.delete_attachment(args.id)
 
     else:
         return None

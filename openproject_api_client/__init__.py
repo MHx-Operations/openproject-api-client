@@ -3,4 +3,6 @@ from .resources import (
     GenericType, Project, WorkPackage, Relation, Version,
     User, PlaceholderUser, Membership, Status, Grid,
     GridWidget, Query, Collection, WorkPackageCollection,
+    Type, Priority, TimeEntry, Activity, Attachment,
+    Notification, Category,
 )

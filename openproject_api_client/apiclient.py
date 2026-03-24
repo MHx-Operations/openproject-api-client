@@ -102,6 +102,18 @@ class ApiClient:
         logger.debug("PATCH %s -> %s", endpoint, resp.status_code)
         return resp
 
+    def http_delete(self, resource):
+        """Perform an HTTP DELETE request."""
+        endpoint = self._endpoint(resource)
+        logger.debug("DELETE %s", endpoint)
+        resp = requests.delete(
+            endpoint,
+            headers=self._headers(),
+            auth=self.auth
+        )
+        logger.debug("DELETE %s -> %s", endpoint, resp.status_code)
+        return resp
+
     def get(self, resource, payload=None):
         """GET a resource and decode the response."""
         response = self.http_get(resource, payload)
@@ -134,6 +146,19 @@ class ApiClient:
                 f"PATCH {resource} failed ({response.status_code}): {response.text}"
             )
         return self.decode_response(response)
+
+    def delete(self, resource):
+        """DELETE a resource.
+
+        Raises RequestError on HTTP 4xx/5xx.
+        Returns True on success (204 No Content or 200).
+        """
+        response = self.http_delete(resource)
+        if response.status_code >= 400:
+            raise RequestError(
+                f"DELETE {resource} failed ({response.status_code}): {response.text}"
+            )
+        return True
 
     def get_paged_collection(self, resource: str, payload: object = None, page_size: int = 5) -> list[res.GenericType]:
         elements = []
@@ -419,6 +444,78 @@ class ApiClient:
         """Fetch a saved query definition (without result elements)."""
         return self.get(f"queries/{query_id}", payload={'pageSize': 0})
 
+    def get_type(self, type_id: int) -> res.Type:
+        """Fetch a single work package type by ID."""
+        return self.get(f"types/{type_id}")
+
+    def get_types(self) -> list[res.Type]:
+        """Fetch all work package types."""
+        return self.get_paged_collection("types", page_size=100)
+
+    def get_types_by_project_id(self, project_id: int) -> list[res.Type]:
+        """Fetch work package types available in a project."""
+        return self.get_paged_collection(f"projects/{project_id}/types", page_size=100)
+
+    def get_priority(self, priority_id: int) -> res.Priority:
+        """Fetch a single priority by ID."""
+        return self.get(f"priorities/{priority_id}")
+
+    def get_priorities(self) -> list[res.Priority]:
+        """Fetch all priorities."""
+        return self.get_paged_collection("priorities", page_size=100)
+
+    def get_category(self, category_id: int) -> res.Category:
+        """Fetch a single category by ID."""
+        return self.get(f"categories/{category_id}")
+
+    def get_categories_by_project_id(self, project_id: int) -> list[res.Category]:
+        """Fetch all categories for a project."""
+        return self.get_paged_collection(f"projects/{project_id}/categories", page_size=100)
+
+    def get_time_entry(self, entry_id: int) -> res.TimeEntry:
+        """Fetch a single time entry by ID."""
+        return self.get(f"time_entries/{entry_id}")
+
+    def get_time_entries(self, work_package_id: int = None, project_id: int = None) -> list[res.TimeEntry]:
+        """Fetch time entries, optionally filtered by work package or project."""
+        filters = []
+        if work_package_id is not None:
+            filters.append({"work_package": {"operator": "=", "values": [str(work_package_id)]}})
+        if project_id is not None:
+            filters.append({"project": {"operator": "=", "values": [str(project_id)]}})
+
+        payload = {}
+        if filters:
+            payload['filters'] = json.dumps(filters)
+
+        return self.get_paged_collection("time_entries", page_size=100, payload=payload)
+
+    def get_activities(self, work_package_id: int) -> list[res.Activity]:
+        """Fetch all activities (journal entries) for a work package."""
+        result = self.get(f"work_packages/{work_package_id}/activities")
+        if result and hasattr(result, '__iter__'):
+            return list(result)
+        return []
+
+    def get_attachment(self, attachment_id: int) -> res.Attachment:
+        """Fetch a single attachment by ID."""
+        return self.get(f"attachments/{attachment_id}")
+
+    def get_attachments_by_work_package(self, work_package_id: int) -> list[res.Attachment]:
+        """Fetch all attachments for a work package."""
+        result = self.get(f"work_packages/{work_package_id}/attachments")
+        if result and hasattr(result, '__iter__'):
+            return list(result)
+        return []
+
+    def get_notifications(self) -> list[res.Notification]:
+        """Fetch all notifications for the current user."""
+        return self.get_paged_collection("notifications", page_size=100)
+
+    def get_notification(self, notification_id: int) -> res.Notification:
+        """Fetch a single notification by ID."""
+        return self.get(f"notifications/{notification_id}")
+
     # write methods
     # ###################################################
 
@@ -560,6 +657,92 @@ class ApiClient:
             body["lag"] = lag
 
         return self.post("relations", body)
+
+    # delete methods
+    # ###################################################
+
+    def delete_workpackage(self, workpackage_id: int) -> bool:
+        """Delete a work package by ID."""
+        return self.delete(f"work_packages/{workpackage_id}")
+
+    def delete_relation(self, relation_id: int) -> bool:
+        """Delete a relation by ID."""
+        return self.delete(f"relations/{relation_id}")
+
+    def delete_attachment(self, attachment_id: int) -> bool:
+        """Delete an attachment by ID."""
+        return self.delete(f"attachments/{attachment_id}")
+
+    def delete_time_entry(self, entry_id: int) -> bool:
+        """Delete a time entry by ID."""
+        return self.delete(f"time_entries/{entry_id}")
+
+    # time entry write methods
+    # ###################################################
+
+    def create_time_entry(self, work_package_id: int, hours: str, spent_on: str, *,
+                          activity_id: int = None, comment: str = None,
+                          project_id: int = None) -> res.TimeEntry:
+        """Create a time entry on a work package.
+
+        hours: ISO 8601 duration (e.g. PT1H30M)
+        spent_on: date (YYYY-MM-DD)
+        """
+        body = {
+            "hours": hours,
+            "spentOn": spent_on,
+            "_links": {
+                "workPackage": {"href": f"/api/v3/work_packages/{work_package_id}"},
+            },
+        }
+        if comment is not None:
+            body["comment"] = {"raw": comment}
+        if project_id is not None:
+            body["_links"]["project"] = {"href": f"/api/v3/projects/{project_id}"}
+        if activity_id is not None:
+            body["_links"]["activity"] = {"href": f"/api/v3/time_entries/activities/{activity_id}"}
+
+        return self.post("time_entries", body)
+
+    def update_time_entry(self, entry_id: int, lock_version: int, *,
+                          hours: str = None, spent_on: str = None,
+                          activity_id: int = None, comment: str = None) -> res.TimeEntry:
+        """Update an existing time entry."""
+        body = {"lockVersion": lock_version}
+        if hours is not None:
+            body["hours"] = hours
+        if spent_on is not None:
+            body["spentOn"] = spent_on
+        if comment is not None:
+            body["comment"] = {"raw": comment}
+
+        links = {}
+        if activity_id is not None:
+            links["activity"] = {"href": f"/api/v3/time_entries/activities/{activity_id}"}
+        if links:
+            body["_links"] = links
+
+        return self.patch(f"time_entries/{entry_id}", body)
+
+    # notification write methods
+    # ###################################################
+
+    def mark_notification_read(self, notification_id: int) -> res.Notification:
+        """Mark a notification as read."""
+        return self.patch(f"notifications/{notification_id}", {"readIAN": True})  # API expects camelCase
+
+    def mark_notification_unread(self, notification_id: int) -> res.Notification:
+        """Mark a notification as unread."""
+        return self.patch(f"notifications/{notification_id}", {"readIAN": False})
+
+    def mark_all_notifications_read(self) -> bool:
+        """Mark all notifications as read."""
+        response = self.http_post("notifications/read_ian", {})
+        if response.status_code >= 400:
+            raise RequestError(
+                f"POST notifications/read_ian failed ({response.status_code}): {response.text}"
+            )
+        return True
 
 
 class ApiError(Exception):
