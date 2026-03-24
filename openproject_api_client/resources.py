@@ -85,6 +85,7 @@ class Project(GenericType):
         self.identifier = ''
         self.name = ''
         self.active = False
+        self.favorited = False
         self.public = False
         self.description = None
         self.createdat = None
@@ -125,24 +126,35 @@ class WorkPackage(GenericType):
     def __init__(self, json_object=None):
 
         self.createdat = None
+        self.date = None
         self.derivedduedate = None
         self.derivedestimatedtime = None
+        self.derivedpercentagedone = None
         self.derivedstartdate = None
         self.description = None
         self.duedate = None
+        self.duration = None
         self.estimatedtime = None
         self.id = None
+        self.ignorenonworkingdays = None
         self.lockversion = None
         self.percentagedone = None
+        self.readonly = None
         self.schedulemanually = None
+        self.spenttime = None
         self.startdate = None
         self.subject = ''
         self.updatedat = None
 
-        # attribs from embedd
+        # attribs from embedd/links
+        self.budget = None
+        self.budget_id = None
+        self.category = None
+        self.category_id = None
         self.type = None
         self.type_id = None
         self.priority = None
+        self.priority_id = None
         self.status = None
         self.status_id = None
         self.project = None
@@ -167,12 +179,24 @@ class WorkPackage(GenericType):
         self.relations_out = {}
         self.relations_in = {}
 
-        super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat', 'startdate', 'duedate'])
+        super().__init__(json_object, debug=False,
+                         datetime_fields=['createdat', 'updatedat'],
+                         date_fields=['startdate', 'duedate', 'derivedstartdate', 'derivedduedate', 'date'])
 
         if '_links' in json_object:
             if 'parent' in json_object['_links']:
                 if json_object['_links']['parent']['href']:
                     self.parent_id = int(json_object['_links']['parent']['href'].split("/")[-1])
+
+            if 'budget' in json_object['_links']:
+                if json_object['_links']['budget']['href']:
+                    self.budget = json_object['_links']['budget'].get('title')
+                    self.budget_id = int(json_object['_links']['budget']['href'].split("/")[-1])
+
+            if 'category' in json_object['_links']:
+                if json_object['_links']['category']['href']:
+                    self.category = json_object['_links']['category'].get('title')
+                    self.category_id = int(json_object['_links']['category']['href'].split("/")[-1])
 
             if 'type' in json_object['_links']:
                 if json_object['_links']['type']['href']:
@@ -182,6 +206,7 @@ class WorkPackage(GenericType):
             if 'priority' in json_object['_links']:
                 if json_object['_links']['priority']['href']:
                     self.priority = json_object['_links']['priority']['title']
+                    self.priority_id = int(json_object['_links']['priority']['href'].split("/")[-1])
 
             if 'status' in json_object['_links']:
                 if json_object['_links']['status']['href']:
@@ -222,6 +247,7 @@ class WorkPackage(GenericType):
 
             if 'priority' in json_object['_embedded']:
                 self.priority = json_object['_embedded']['priority']['name']
+                self.priority_id = json_object['_embedded']['priority'].get('id')
 
             if 'status' in json_object['_embedded']:
                 self.status = json_object['_embedded']['status']['name']
@@ -245,6 +271,14 @@ class WorkPackage(GenericType):
             if 'version' in json_object['_embedded']:
                 self.version = json_object['_embedded']['version']['name']
                 self.version_id = json_object['_embedded']['version']['id']
+
+            if 'budget' in json_object['_embedded']:
+                self.budget = json_object['_embedded']['budget'].get('subject')
+                self.budget_id = json_object['_embedded']['budget'].get('id')
+
+            if 'category' in json_object['_embedded']:
+                self.category = json_object['_embedded']['category'].get('name')
+                self.category_id = json_object['_embedded']['category'].get('id')
 
             if 'relations' in json_object['_embedded']:
                 relations = json_object['_embedded']['relations']['_embedded']['elements']
@@ -307,6 +341,7 @@ class Relation(GenericType):
     def __init__(self, json_object=None):
         self.id = None
         self.description = None
+        self.lag = None
         self.name = None
         self.reversetype = None
         self.type = None
@@ -358,16 +393,19 @@ class User(GenericType):
 
     def __init__(self, json_object=None):
         self.id = None
-        self.login = None
-        self.firstname = None
-        self.lastname = None
-        self.name = None
+        self.admin = None
+        self.avatar = None
         self.email = None
+        self.firstname = None
+        self.language = None
+        self.lastname = None
+        self.login = None
+        self.name = None
+        self.status = None
         self.createdat = None
         self.updatedat = None
 
-        super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'],
-                         date_fields=['enddate', 'startdate'])
+        super().__init__(json_object, debug=False, datetime_fields=['createdat', 'updatedat'])
 
     def __str__(self):
         return f"User({self.id}): {self.name}"
@@ -400,6 +438,8 @@ class Membership(GenericType):
         self.principal_id = None
         self.principal_type = None
 
+        self.roles = []
+
         self.createdat = None
         self.updatedat = None
 
@@ -417,6 +457,14 @@ class Membership(GenericType):
                 self.principal_id = int(json_object['_links']['principal']['href'].split("/")[-1])
                 self.principal_type = json_object['_links']['principal']['href'].split("/")[-2]
 
+        if '_embedded' in json_object:
+            if 'roles' in json_object['_embedded']:
+                for role in json_object['_embedded']['roles']:
+                    self.roles.append({
+                        'id': role.get('id'),
+                        'name': role.get('name'),
+                    })
+
 
     def __str__(self):
         return f"Membership({self.id}): {self.principal} in {self.project}"
@@ -427,9 +475,13 @@ class Status(GenericType):
     def __init__(self, json_object=None):
         self.id = None
 
-        self.name = None
         self.color = None
+        self.defaultdoneratio = None
+        self.excludedfromtotals = None
         self.isclosed = None
+        self.isdefault = None
+        self.isreadonly = None
+        self.name = None
         self.position = None
 
         self.createdat = None
@@ -515,6 +567,7 @@ class Query(GenericType):
         self.timelinelabels = None
         self.timelinevisible = None
         self.timelinezoomlevel = None
+        self.timestamps = None
         self.updatedat = None
 
         self.project = None
