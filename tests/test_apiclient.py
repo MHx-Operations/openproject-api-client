@@ -9,8 +9,13 @@ from openproject_api_client.apiclient import ApiClient, ApiError
 from openproject_api_client.resources import (
     Collection,
     GenericType,
+    Membership,
+    PlaceholderUser,
     Project,
+    Relation,
     Status,
+    User,
+    Version,
     WorkPackage,
 )
 from tests.conftest import make_collection
@@ -317,3 +322,170 @@ class TestEndpointMethods:
         assert len(grids) == 1
         # verify filter sent
         assert "filters" in responses.calls[0].request.url
+
+    @responses.activate
+    def test_get_placeholder_users(self, placeholder_user_json):
+        coll = make_collection("Collection", [placeholder_user_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/placeholder_users",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        pus = client.get_placeholder_users()
+        assert len(pus) == 1
+        assert isinstance(pus[0], PlaceholderUser)
+
+    @responses.activate
+    def test_get_project_members(self, membership_json):
+        coll = make_collection("Collection", [membership_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/memberships",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        members = client.get_project_members()
+        assert len(members) == 1
+        assert isinstance(members[0], Membership)
+
+    @responses.activate
+    def test_get_workpackages_by_project_id(self, workpackage_json):
+        coll = make_collection("Collection", [workpackage_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/projects/1/work_packages",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        wps = client.get_workpackages_by_project_id(1, status="closed")
+        assert len(wps) == 1
+        assert "filters" in responses.calls[0].request.url
+
+    @responses.activate
+    def test_get_workpackages_status_ids_filter(self, workpackage_json):
+        coll = make_collection("Collection", [workpackage_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/work_packages",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        wps = client.get_workpackages(status_ids=[1, 2])
+        assert len(wps) == 1
+        assert "filters" in responses.calls[0].request.url
+
+    @responses.activate
+    def test_get_single_relation(self, relation_json):
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/relations/100",
+            json=relation_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        rel = client.get_relation(100)
+        assert isinstance(rel, Relation)
+        assert rel.id == 100
+
+    @responses.activate
+    def test_get_single_version(self, version_json):
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/versions/7",
+            json=version_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        v = client.get_version(7)
+        assert isinstance(v, Version)
+        assert v.name == "v1.0"
+
+    @responses.activate
+    def test_get_single_user(self, user_json):
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/users/3",
+            json=user_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        u = client.get_user(3)
+        assert isinstance(u, User)
+        assert u.name == "Alice Smith"
+
+    @responses.activate
+    def test_get_single_status(self, status_json):
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/statuses/1",
+            json=status_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        s = client.get_status(1)
+        assert isinstance(s, Status)
+
+    @responses.activate
+    def test_get_workpackages_all_status(self, workpackage_json):
+        coll = make_collection("Collection", [workpackage_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/work_packages",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        wps = client.get_workpackages(status="all")
+        assert len(wps) == 1
+        assert "filters" in responses.calls[0].request.url
+
+
+# -- Project hierarchy (get_projects_dict) ---------------------------------
+
+class TestProjectHierarchy:
+    @responses.activate
+    def test_get_projects_dict_builds_hierarchy(self, project_json, child_project_json):
+        coll = make_collection("Collection",
+                               [project_json, child_project_json],
+                               total=2, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/projects",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        pmap = client.get_projects_dict()
+
+        # Root project
+        assert pmap[1].level == 1
+        assert pmap[1].fullname == "My Project"
+        assert pmap[1].path == []
+        assert pmap[1].path_ids == []
+
+        # Child project
+        assert pmap[2].level == 2
+        assert pmap[2].fullname == "My Project/Child Project"
+        assert pmap[2].path == ["My Project"]
+        assert pmap[2].path_ids == [1]
+
+    @responses.activate
+    def test_get_projects_returns_list(self, project_json):
+        coll = make_collection("Collection", [project_json],
+                               total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/projects",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        projects = client.get_projects()
+        assert isinstance(projects, list)
+        assert len(projects) == 1
+        assert isinstance(projects[0], Project)

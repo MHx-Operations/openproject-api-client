@@ -5,11 +5,12 @@ Provides a simple interface to read data from any OpenProject instance
 API responses to typed Python objects.
 """
 
+from __future__ import annotations
+
 import json
 import logging
 import sys
 from types import SimpleNamespace
-from typing import List
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -53,7 +54,8 @@ class ApiClient:
         payload = payload or {}
         # versioning an API guarantees compatibility
         endpoint = f"{self.base_url}{self._rootpath}/{resource}"
-        return requests.get(
+        logger.debug("GET %s params=%s", endpoint, payload or "(none)")
+        resp = requests.get(
             endpoint,
             # attach parameters to the url, like `&foo=bar`
             params=payload,
@@ -64,6 +66,8 @@ class ApiClient:
             },
             auth=self.auth
         )
+        logger.debug("GET %s -> %s", endpoint, resp.status_code)
+        return resp
 
     def get(self, resource, payload=None):
         """
@@ -81,7 +85,7 @@ class ApiClient:
         else:
             return None
 
-    def get_paged_collection(self, resource: str, payload: object = None, page_size: int = 5) -> List[res.GenericType]:
+    def get_paged_collection(self, resource: str, payload: object = None, page_size: int = 5) -> list[res.GenericType]:
         elements = []
 
         payload = payload or {}
@@ -92,7 +96,10 @@ class ApiClient:
             payload.update({'offset': offset})
             collection = self.get(resource, payload=payload)
             if collection:
-                elements += list(collection)
+                page_items = list(collection)
+                elements += page_items
+                logger.debug("Paged %s: offset=%d fetched=%d total=%s",
+                             resource, offset, len(page_items), collection.total)
 
                 # some collections do not deliver pagesize and offset
                 effective_pagesize = page_size
@@ -109,6 +116,7 @@ class ApiClient:
             else:
                 break
 
+        logger.debug("Paged %s: done, %d elements total", resource, len(elements))
         return elements
 
     @staticmethod
@@ -141,7 +149,7 @@ class ApiClient:
     # methods for specific/convenient access to endpoints
     # ###################################################
 
-    def get_projects(self) -> List[res.Project]:
+    def get_projects(self) -> list[res.Project]:
         """
         get an array of all projects
 
@@ -178,7 +186,7 @@ class ApiClient:
         """Fetch a single work package by ID."""
         return self.get(f"work_packages/{workpackage_id}")
 
-    def get_workpackages(self, status: str = None, status_ids: List[int] = None, page_size=100) -> List[res.WorkPackage]:
+    def get_workpackages(self, status: str = None, status_ids: list[int] = None, page_size=100) -> list[res.WorkPackage]:
         """
         get all workpackages across all projects
 
@@ -189,7 +197,7 @@ class ApiClient:
         :param page_size: number of items per page
         :type page_size: int
         :return: returns list of all workpackages matching the filter
-        :rtype: List[WorkPackage]
+        :rtype: list[WorkPackage]
         """
         filters = []
         if status is not None:
@@ -209,7 +217,7 @@ class ApiClient:
 
         return self.get_paged_collection('work_packages', page_size=page_size, payload=payload)
 
-    def get_workpackages_by_project_id(self, project_id: int, status: str = None, status_ids: List[int] = None, page_size=100) -> List[res.WorkPackage]:
+    def get_workpackages_by_project_id(self, project_id: int, status: str = None, status_ids: list[int] = None, page_size=100) -> list[res.WorkPackage]:
         """
         fetched workpackages for a specific projects
 
@@ -220,7 +228,7 @@ class ApiClient:
         :param status_ids: list of status ids used to filter ; when using status must not be set
         :type status_ids: int
         :return: returns list of workpackages of requested project and filter
-        :rtype: List[WorkPackage]
+        :rtype: list[WorkPackage]
         """
         # build filter
         filters = []
@@ -241,7 +249,7 @@ class ApiClient:
 
         return self.get_paged_collection(f"projects/{project_id}/work_packages", page_size=page_size, payload=payload)
 
-    def get_workpackages_by_query_id(self, query_id: int) -> List[res.WorkPackage]:
+    def get_workpackages_by_query_id(self, query_id: int) -> list[res.WorkPackage]:
         """Fetch all work packages returned by a saved query."""
         workpackages = []
         page_size = 10
@@ -268,7 +276,7 @@ class ApiClient:
         """Fetch a single relation by ID."""
         return self.get(f"relations/{relation_id}")
 
-    def get_relations(self) -> List[res.Relation]:
+    def get_relations(self) -> list[res.Relation]:
         """Fetch all work package relations."""
         result = self.get_paged_collection("relations", page_size=500)
         if result:
@@ -280,7 +288,7 @@ class ApiClient:
         """Fetch a single version (milestone) by ID."""
         return self.get(f"versions/{version_id}")
 
-    def get_versions(self) -> List[res.Version]:
+    def get_versions(self) -> list[res.Version]:
         """Fetch all versions across all projects."""
         result = self.get_paged_collection("versions", page_size=100)
 
@@ -293,7 +301,7 @@ class ApiClient:
         """Fetch a single user by ID."""
         return self.get(f"users/{user_id}")
 
-    def get_users(self) -> List[res.User]:
+    def get_users(self) -> list[res.User]:
         """Fetch all users."""
         result = self.get_paged_collection("users", page_size=100)
 
@@ -306,7 +314,7 @@ class ApiClient:
         """Fetch a single placeholder user by ID."""
         return self.get(f"placeholder_users/{user_id}")
 
-    def get_placeholder_users(self) -> List[res.PlaceholderUser]:
+    def get_placeholder_users(self) -> list[res.PlaceholderUser]:
         """Fetch all placeholder users."""
         result = self.get_paged_collection("placeholder_users", page_size=100)
 
@@ -319,7 +327,7 @@ class ApiClient:
         """Fetch a single project membership by ID."""
         return self.get(f"memberships/{member_id}")
 
-    def get_project_members(self) -> List[res.Membership]:
+    def get_project_members(self) -> list[res.Membership]:
         """Fetch all project memberships."""
         result = self.get_paged_collection("memberships", page_size=100)
 
@@ -332,7 +340,7 @@ class ApiClient:
         """Fetch a single work package status by ID."""
         return self.get(f"statuses/{status_id}")
 
-    def get_statuses(self) -> List[res.Status]:
+    def get_statuses(self) -> list[res.Status]:
         """Fetch all work package statuses."""
         result = self.get_paged_collection("statuses", page_size=100)
 
@@ -345,7 +353,7 @@ class ApiClient:
         """Fetch a single grid (board) by ID."""
         return self.get(f"grids/{grid_id}")
 
-    def get_grids(self, scope: str = None) -> List[res.Grid]:
+    def get_grids(self, scope: str = None) -> list[res.Grid]:
         # build filter
         filters = []
         if scope:

@@ -18,23 +18,25 @@ resource models, and automatic JSON-to-object mapping.
 
 ### Known Issues
 
-- **Bug:** `_calculate_relations_inout()` checks `r.type` but creates the key
-  with `r.reversetype` — the `not in` guard is against the wrong key, so
-  inbound relation lists can get silently overwritten.
+- ~~**Bug:** `_calculate_relations_inout()` checks `r.type` but creates the key
+  with `r.reversetype`.~~ **Resolved** — code was correct; added regression
+  tests to verify multiple relations of the same type accumulate properly.
 
 ---
 
 ## Backlog
 
-### 1. Tests (in progress)
+### 1. Tests ✅
 
-Unit tests with pytest + responses for HTTP mocking.
+Unit tests with pytest + responses for HTTP mocking (86 tests).
 
-- [ ] Resource model tests — JSON in, correct attributes out
-- [ ] `decode()` / `decode_response()` tests
-- [ ] Pagination tests (`get_paged_collection`)
-- [ ] Relations bug regression test
-- [ ] CLI tests
+- [x] Resource model tests — JSON in, correct attributes out
+- [x] `decode()` / `decode_response()` tests
+- [x] Pagination tests (`get_paged_collection`)
+- [x] Relations regression tests (multiple same-type, mixed directions)
+- [x] CLI tests (arg parsing, env vars, json_out)
+- [x] Project hierarchy tests (`get_projects_dict`)
+- [x] Endpoint convenience method tests (all endpoints covered)
 
 ### 2. Write Support
 
@@ -55,9 +57,9 @@ The client is currently read-only. Add:
 - [ ] Filtering flags (`--status`, `--project`)
 - [ ] Exit codes for scripting
 
-### 4. Housekeeping
+### 4. Housekeeping ✅
 
-- [ ] Type hints cleanup (some `List` imports from `typing` — use `list` for 3.9+)
-- [ ] Consistent `__str__` on all models
-- [ ] Logging improvements
-- [ ] CI pipeline (GitHub Actions)
+- [x] Type hints cleanup — replaced `typing.List` with `from __future__ import annotations` + `list`
+- [x] Consistent `__str__` on all models (already present)
+- [x] Logging improvements — debug logging for HTTP requests and pagination
+- [x] CI pipeline (GitHub Actions — Python 3.9–3.13 matrix)

@@ -174,6 +174,124 @@ class TestWorkPackage:
         wp = WorkPackage(workpackage_json)
         assert "Fix the widget" in str(wp)
 
+    def test_multiple_inbound_same_type_not_overwritten(self, workpackage_json):
+        """Regression: multiple inbound relations of the same type must
+        accumulate into a list, not silently overwrite each other."""
+        wp_json = dict(workpackage_json)
+        wp_json["_embedded"] = {
+            "relations": {
+                "_embedded": {
+                    "elements": [
+                        {
+                            "_type": "Relation", "id": 200,
+                            "name": "blocks", "type": "blocks",
+                            "reverseType": "blocked", "description": "",
+                            "_links": {
+                                "from": {"href": "/api/v3/work_packages/10", "title": "A"},
+                                "to": {"href": "/api/v3/work_packages/42", "title": "Fix the widget"},
+                            },
+                        },
+                        {
+                            "_type": "Relation", "id": 201,
+                            "name": "blocks", "type": "blocks",
+                            "reverseType": "blocked", "description": "",
+                            "_links": {
+                                "from": {"href": "/api/v3/work_packages/20", "title": "B"},
+                                "to": {"href": "/api/v3/work_packages/42", "title": "Fix the widget"},
+                            },
+                        },
+                    ]
+                }
+            }
+        }
+        wp = WorkPackage(wp_json)
+        # Both inbound relations should be present under "blocked"
+        assert "blocked" in wp.relations_in
+        assert 10 in wp.relations_in["blocked"]
+        assert 20 in wp.relations_in["blocked"]
+        assert len(wp.relations_in["blocked"]) == 2
+
+    def test_multiple_outbound_same_type_not_overwritten(self, workpackage_json):
+        """Regression: multiple outbound relations of same type accumulate."""
+        wp_json = dict(workpackage_json)
+        wp_json["_embedded"] = {
+            "relations": {
+                "_embedded": {
+                    "elements": [
+                        {
+                            "_type": "Relation", "id": 300,
+                            "name": "blocks", "type": "blocks",
+                            "reverseType": "blocked", "description": "",
+                            "_links": {
+                                "from": {"href": "/api/v3/work_packages/42", "title": "Fix the widget"},
+                                "to": {"href": "/api/v3/work_packages/50", "title": "Deploy"},
+                            },
+                        },
+                        {
+                            "_type": "Relation", "id": 301,
+                            "name": "blocks", "type": "blocks",
+                            "reverseType": "blocked", "description": "",
+                            "_links": {
+                                "from": {"href": "/api/v3/work_packages/42", "title": "Fix the widget"},
+                                "to": {"href": "/api/v3/work_packages/60", "title": "Release"},
+                            },
+                        },
+                    ]
+                }
+            }
+        }
+        wp = WorkPackage(wp_json)
+        assert "blocks" in wp.relations_out
+        assert 50 in wp.relations_out["blocks"]
+        assert 60 in wp.relations_out["blocks"]
+        assert len(wp.relations_out["blocks"]) == 2
+
+    def test_mixed_relation_directions(self, workpackage_json):
+        """A relation where this WP is both from and to (different relations)
+        results in correct in/out separation."""
+        wp_json = dict(workpackage_json)
+        wp_json["_embedded"] = {
+            "relations": {
+                "_embedded": {
+                    "elements": [
+                        {
+                            "_type": "Relation", "id": 400,
+                            "name": "blocks", "type": "blocks",
+                            "reverseType": "blocked", "description": "",
+                            "_links": {
+                                "from": {"href": "/api/v3/work_packages/42", "title": "Fix"},
+                                "to": {"href": "/api/v3/work_packages/50", "title": "Deploy"},
+                            },
+                        },
+                        {
+                            "_type": "Relation", "id": 401,
+                            "name": "follows", "type": "follows",
+                            "reverseType": "precedes", "description": "",
+                            "_links": {
+                                "from": {"href": "/api/v3/work_packages/30", "title": "Spec"},
+                                "to": {"href": "/api/v3/work_packages/42", "title": "Fix"},
+                            },
+                        },
+                    ]
+                }
+            }
+        }
+        wp = WorkPackage(wp_json)
+        assert wp.relations_out == {"blocks": [50]}
+        assert wp.relations_in == {"precedes": [30]}
+
+    def test_embedded_overrides_links(self, workpackage_json):
+        """When both _links and _embedded provide data, _embedded wins."""
+        wp_json = dict(workpackage_json)
+        wp_json["_embedded"] = {
+            "status": {"name": "In Progress"},
+            "project": {"name": "Other Project", "id": 99},
+        }
+        wp = WorkPackage(wp_json)
+        assert wp.status == "In Progress"
+        assert wp.project == "Other Project"
+        assert wp.project_id == 99
+
 
 # -- Relation --------------------------------------------------------------
 

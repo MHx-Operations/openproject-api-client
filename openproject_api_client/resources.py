@@ -4,9 +4,9 @@ Each class represents an OpenProject resource type (Project, WorkPackage, etc.)
 and is automatically instantiated when the API returns a matching '_type' field.
 """
 
-import datetime
+from __future__ import annotations
 
-from typing import List
+import datetime
 
 from openproject_api_client import apiclient
 
@@ -163,7 +163,7 @@ class WorkPackage(GenericType):
         self.parent_id = None
 
         # relations
-        self.relations_obj: List[Relation] = []
+        self.relations_obj: list[Relation] = []
         self.relations_out = {}
         self.relations_in = {}
 
