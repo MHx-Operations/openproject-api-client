@@ -1,6 +1,6 @@
 # openproject-api-client
 
-Python client for the OpenProject API v3. Read-only access to projects, work packages,
+Python client and CLI for the OpenProject API v3. Read and write access to projects, work packages,
 relations, versions, users, memberships, statuses, grids, and queries.
 
 API documentation: https://www.openproject.org/docs/api/
@@ -11,7 +11,7 @@ API documentation: https://www.openproject.org/docs/api/
 pip install git+https://github.com/MHx-Operations/openproject-api-client.git#egg=openproject_api_client
 ```
 
-## Quick Start
+## Quick Start (Python)
 
 ```python
 from openproject_api_client import ApiClient
@@ -29,11 +29,47 @@ work_packages = client.get_workpackages_by_project_id(46, status='open')
 wp = client.get_workpackage(1155)
 print(wp.relations_in, wp.relations_out)
 
-# fetch work packages from a saved query
-wps = client.get_workpackages_by_query_id(12)
+# create a new work package
+new_wp = client.create_workpackage(
+    project_id=1, subject="Implement feature X",
+    type_id=1, assignee_id=3, priority_id=2,
+)
+
+# update status of a work package
+client.update_workpackage(new_wp.id, lock_version=new_wp.lockversion, status_id=7)
+
+# add a comment
+client.add_workpackage_comment(new_wp.id, "Done with implementation")
+
+# create a relation
+client.create_relation(from_id=42, to_id=50, relation_type="blocks")
 ```
 
-## Available Methods
+## Quick Start (CLI)
+
+```bash
+export OPENPROJECT_BASEURL="https://openproject.example.com/"
+export OPENPROJECT_APIKEY="your-api-key"
+
+# show full usage guide (for humans and AI agents)
+openproject-cli guide
+
+# read
+openproject-cli --json projects
+openproject-cli --json work-packages --project-id 5 --status open
+openproject-cli --json statuses
+openproject-cli --json users
+
+# write
+openproject-cli create-work-package --project-id 1 --subject "New task" --assignee-id 3
+openproject-cli update-work-package 42 --status-id 7
+openproject-cli add-comment 42 --message "Status update: done"
+openproject-cli create-relation --from-id 42 --to-id 50 --type blocks
+```
+
+Use `openproject-cli guide` for the full reference including AI-agent workflow.
+
+## Read Methods
 
 | Method | Description |
 |--------|-------------|
@@ -53,66 +89,111 @@ wps = client.get_workpackages_by_query_id(12)
 | `get_query(id)` | Saved query definition |
 | `get(resource, payload)` | Generic GET for any API v3 endpoint |
 
+## Write Methods
+
+| Method | Description |
+|--------|-------------|
+| `create_workpackage(project_id, subject, ...)` | Create a new work package |
+| `update_workpackage(id, lock_version, ...)` | Update a work package (optimistic locking) |
+| `add_workpackage_comment(id, message)` | Add a comment/activity to a work package |
+| `create_relation(from_id, to_id, type, ...)` | Create a relation between work packages |
+| `post(resource, body)` | Generic POST for any API v3 endpoint |
+| `patch(resource, body)` | Generic PATCH for any API v3 endpoint |
+
+## CLI Commands
+
+### Read Commands
+
+```
+openproject-cli projects                            List all projects
+openproject-cli work-packages [--status open|closed|all] [--project-id N] [--query-id N]
+openproject-cli work-package <id>                   Get single work package
+openproject-cli statuses                            List all statuses (useful for ID lookup)
+openproject-cli users                               List all users
+openproject-cli versions                            List all versions
+openproject-cli relations                           List all relations
+openproject-cli memberships                         List all memberships
+openproject-cli grids [--scope ...]                 List all grids
+openproject-cli placeholder-users                   List placeholder users
+openproject-cli relation|version|user|placeholder-user|membership|status|grid|query <id>
+```
+
+### Write Commands
+
+```
+openproject-cli create-work-package --project-id N --subject "..." [options]
+openproject-cli update-work-package <id> [--subject "..."] [--status-id N] [options]
+openproject-cli add-comment <id> --message "..."
+openproject-cli create-relation --from-id N --to-id N --type <relation-type> [options]
+```
+
+### Options
+
+- `--json` — Machine-parseable JSON output (recommended for scripts and AI agents)
+- `--baseurl URL` — Override env OPENPROJECT_BASEURL
+- `--apikey KEY` — Override env OPENPROJECT_APIKEY
+- `guide` — Full usage guide (no credentials needed)
+
 ## API Coverage
 
-This client currently provides **read-only** access to a subset of the OpenProject API v3.
-The table below shows all resource types available in the API and their support status.
+### Supported (Read & Write)
 
-### Supported
-
-| Resource | List | Get | Filter | Notes |
-|----------|:----:|:---:|:------:|-------|
-| Projects | :white_check_mark: | :white_check_mark: | — | Hierarchy paths via `get_projects_dict()` |
-| Work Packages | :white_check_mark: | :white_check_mark: | status, project, query | Embedded relations on single fetch |
-| Relations | :white_check_mark: | :white_check_mark: | — | Directed (from → to) |
-| Versions | :white_check_mark: | :white_check_mark: | — | Milestones |
-| Users | :white_check_mark: | :white_check_mark: | — | |
-| Placeholder Users | :white_check_mark: | :white_check_mark: | — | |
-| Memberships | :white_check_mark: | :white_check_mark: | — | Project memberships |
-| Statuses | :white_check_mark: | :white_check_mark: | — | Work package statuses |
-| Grids | :white_check_mark: | :white_check_mark: | scope | Boards / dashboards with widgets |
-| Queries | — | :white_check_mark: | — | Saved query with embedded results |
+| Resource | List | Get | Create | Update | Filter | Notes |
+|----------|:----:|:---:|:------:|:------:|:------:|-------|
+| Projects | :white_check_mark: | :white_check_mark: | — | — | — | Hierarchy paths via `get_projects_dict()` |
+| Work Packages | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: | status, project, query | Embedded relations on single fetch |
+| Relations | :white_check_mark: | :white_check_mark: | :white_check_mark: | — | — | Directed (from → to), with lag |
+| Activities | — | — | :white_check_mark: | — | — | Add comments to work packages |
+| Versions | :white_check_mark: | :white_check_mark: | — | — | — | Milestones |
+| Users | :white_check_mark: | :white_check_mark: | — | — | — | |
+| Placeholder Users | :white_check_mark: | :white_check_mark: | — | — | — | |
+| Memberships | :white_check_mark: | :white_check_mark: | — | — | — | Project memberships with roles |
+| Statuses | :white_check_mark: | :white_check_mark: | — | — | — | Work package statuses |
+| Grids | :white_check_mark: | :white_check_mark: | — | — | scope | Boards / dashboards with widgets |
+| Queries | — | :white_check_mark: | — | — | — | Saved query with embedded results |
 
 ### Not yet supported
 
-| Resource | API Operations | Notes |
-|----------|---------------|-------|
-| Activities | GET | Work package journal entries |
-| Actions / Capabilities | GET | Permission system |
-| Attachments | GET, POST, DELETE | File attachments |
-| Budgets | GET | Project budgets |
-| Categories | GET | Work package categories |
-| Custom Actions | GET, PATCH, DELETE, Execute | Custom workflow actions |
-| Custom Fields / Options | GET, PATCH, DELETE | Custom field definitions |
-| Days / Work Schedule | GET, PATCH | Working/non-working days |
-| Documents | GET | Project documents |
-| File Links | GET, PATCH, DELETE | External storage links |
-| Groups | GET, POST, PATCH, DELETE | User groups |
-| Help Texts | GET | Attribute help texts |
-| Meetings | GET | Meeting resources |
-| News | GET | Project news |
-| Notifications | GET, PATCH | In-app notifications |
-| OAuth | GET, POST, DELETE | OAuth applications/credentials |
-| Portfolios | GET, POST, PATCH, DELETE | Project portfolios |
-| Posts | GET | Forum posts |
-| Principals | GET | Users, groups, placeholder users |
-| Priorities | GET | Work package priorities |
-| Programs | GET, POST, PATCH, DELETE | Programs |
-| Project Storages | GET, POST, PATCH, DELETE | Project ↔ storage links |
-| Reminders | GET, POST, DELETE | Work package reminders |
-| Rendering | POST | Markdown/plain text rendering |
-| Revisions | GET | SCM revisions |
-| Roles | GET | Permission roles |
-| Storages | GET, POST, PATCH, DELETE | External file storages (Nextcloud, etc.) |
-| Time Entries | GET, POST, PATCH, DELETE | Time tracking |
-| Types | GET | Work package types (Task, Bug, etc.) |
-| Views | GET, PATCH, DELETE | Saved views |
-| Wiki Pages | GET, PATCH, DELETE | Wiki content |
-| Workspaces | GET | Projects (OpenProject 17+) |
+| Resource | API Operations | Priority | Notes |
+|----------|---------------|----------|-------|
+| Types | GET | High | Work package types (Task, Bug, etc.) — needed for type ID lookup |
+| Priorities | GET | High | Priority levels — needed for priority ID lookup |
+| Time Entries | GET, POST, PATCH, DELETE | High | Time tracking |
+| Attachments | GET, POST, DELETE | Medium | File attachments |
+| Categories | GET | Medium | Work package categories |
+| Budgets | GET | Medium | Project budgets |
+| Notifications | GET, PATCH | Medium | In-app notifications |
+| Activities | GET | Medium | Read work package journal/history |
+| Custom Actions | GET, PATCH, DELETE, Execute | Low | Custom workflow actions |
+| Custom Fields / Options | GET, PATCH, DELETE | Low | Custom field definitions |
+| Days / Work Schedule | GET, PATCH | Low | Working/non-working days |
+| Documents | GET | Low | Project documents |
+| File Links | GET, PATCH, DELETE | Low | External storage links |
+| Groups | GET, POST, PATCH, DELETE | Low | User groups |
+| Help Texts | GET | Low | Attribute help texts |
+| Meetings | GET | Low | Meeting resources |
+| News | GET | Low | Project news |
+| OAuth | GET, POST, DELETE | Low | OAuth applications/credentials |
+| Portfolios | GET, POST, PATCH, DELETE | Low | Project portfolios |
+| Posts | GET | Low | Forum posts |
+| Principals | GET | Low | Users, groups, placeholder users |
+| Programs | GET, POST, PATCH, DELETE | Low | Programs |
+| Project Storages | GET, POST, PATCH, DELETE | Low | Project ↔ storage links |
+| Reminders | GET, POST, DELETE | Low | Work package reminders |
+| Rendering | POST | Low | Markdown/plain text rendering |
+| Revisions | GET | Low | SCM revisions |
+| Roles | GET | Low | Permission roles |
+| Storages | GET, POST, PATCH, DELETE | Low | External file storages (Nextcloud, etc.) |
+| Views | GET, PATCH, DELETE | Low | Saved views |
+| Wiki Pages | GET, PATCH, DELETE | Low | Wiki content |
+| Workspaces | GET | Low | Projects (OpenProject 17+) |
 
-> **Note:** Write operations (POST, PATCH, DELETE) are listed for the API but this client
-> is currently read-only. The `get()` method can be used to access any GET endpoint not
-> listed above.
+### Still missing for full write workflow
+
+- **DELETE** operations (work packages, relations, etc.)
+- **Types endpoint** (GET) — for looking up type IDs when creating work packages
+- **Priorities endpoint** (GET) — for looking up priority IDs
+- **Time Entries** — for time tracking workflows
 
 ## OpenProject Compatibility
 
