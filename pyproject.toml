@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68.0", "wheel"]
+requires = ["setuptools>=68.0,<77.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -10,6 +10,22 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
 dependencies = ["requests>=2.25.1"]
+keywords = ["openproject", "api", "client", "project-management"]
+authors = [
+    {name = "MHx Operations GmbH"},
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
 [project.scripts]
 openproject-cli = "openproject_api_client.cli:main"
@@ -19,3 +35,4 @@ test = ["pytest>=7.0", "responses>=0.23"]
 
 [project.urls]
 Repository = "https://github.com/MHx-Operations/openproject-api-client"
+Issues = "https://github.com/MHx-Operations/openproject-api-client/issues"
