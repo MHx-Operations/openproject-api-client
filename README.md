@@ -53,6 +53,67 @@ wps = client.get_workpackages_by_query_id(12)
 | `get_query(id)` | Saved query definition |
 | `get(resource, payload)` | Generic GET for any API v3 endpoint |
 
+## API Coverage
+
+This client currently provides **read-only** access to a subset of the OpenProject API v3.
+The table below shows all resource types available in the API and their support status.
+
+### Supported
+
+| Resource | List | Get | Filter | Notes |
+|----------|:----:|:---:|:------:|-------|
+| Projects | :white_check_mark: | :white_check_mark: | — | Hierarchy paths via `get_projects_dict()` |
+| Work Packages | :white_check_mark: | :white_check_mark: | status, project, query | Embedded relations on single fetch |
+| Relations | :white_check_mark: | :white_check_mark: | — | Directed (from → to) |
+| Versions | :white_check_mark: | :white_check_mark: | — | Milestones |
+| Users | :white_check_mark: | :white_check_mark: | — | |
+| Placeholder Users | :white_check_mark: | :white_check_mark: | — | |
+| Memberships | :white_check_mark: | :white_check_mark: | — | Project memberships |
+| Statuses | :white_check_mark: | :white_check_mark: | — | Work package statuses |
+| Grids | :white_check_mark: | :white_check_mark: | scope | Boards / dashboards with widgets |
+| Queries | — | :white_check_mark: | — | Saved query with embedded results |
+
+### Not yet supported
+
+| Resource | API Operations | Notes |
+|----------|---------------|-------|
+| Activities | GET | Work package journal entries |
+| Actions / Capabilities | GET | Permission system |
+| Attachments | GET, POST, DELETE | File attachments |
+| Budgets | GET | Project budgets |
+| Categories | GET | Work package categories |
+| Custom Actions | GET, PATCH, DELETE, Execute | Custom workflow actions |
+| Custom Fields / Options | GET, PATCH, DELETE | Custom field definitions |
+| Days / Work Schedule | GET, PATCH | Working/non-working days |
+| Documents | GET | Project documents |
+| File Links | GET, PATCH, DELETE | External storage links |
+| Groups | GET, POST, PATCH, DELETE | User groups |
+| Help Texts | GET | Attribute help texts |
+| Meetings | GET | Meeting resources |
+| News | GET | Project news |
+| Notifications | GET, PATCH | In-app notifications |
+| OAuth | GET, POST, DELETE | OAuth applications/credentials |
+| Portfolios | GET, POST, PATCH, DELETE | Project portfolios |
+| Posts | GET | Forum posts |
+| Principals | GET | Users, groups, placeholder users |
+| Priorities | GET | Work package priorities |
+| Programs | GET, POST, PATCH, DELETE | Programs |
+| Project Storages | GET, POST, PATCH, DELETE | Project ↔ storage links |
+| Reminders | GET, POST, DELETE | Work package reminders |
+| Rendering | POST | Markdown/plain text rendering |
+| Revisions | GET | SCM revisions |
+| Roles | GET | Permission roles |
+| Storages | GET, POST, PATCH, DELETE | External file storages (Nextcloud, etc.) |
+| Time Entries | GET, POST, PATCH, DELETE | Time tracking |
+| Types | GET | Work package types (Task, Bug, etc.) |
+| Views | GET, PATCH, DELETE | Saved views |
+| Wiki Pages | GET, PATCH, DELETE | Wiki content |
+| Workspaces | GET | Projects (OpenProject 17+) |
+
+> **Note:** Write operations (POST, PATCH, DELETE) are listed for the API but this client
+> is currently read-only. The `get()` method can be used to access any GET endpoint not
+> listed above.
+
 ## OpenProject Compatibility
 
 Works with **OpenProject 10 and later**. Uses the stable API v3 (`/api/v3/`).
