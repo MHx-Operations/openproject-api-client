@@ -62,12 +62,12 @@ export OPENPROJECT_APIKEY="your-api-key"
 openproject-cli guide
 
 # read
-openproject-cli --json projects
-openproject-cli --json types
-openproject-cli --json priorities
-openproject-cli --json statuses
-openproject-cli --json work-packages --project-id 5 --status open
-openproject-cli --json time-entries --work-package-id 42
+openproject-cli --json get-projects
+openproject-cli --json get-types
+openproject-cli --json get-priorities
+openproject-cli --json get-statuses
+openproject-cli --json get-work-packages --project-id 5 --status open
+openproject-cli --json get-time-entries --work-package-id 42
 
 # write
 openproject-cli create-work-package --project-id 1 --subject "New task" --type-id 1

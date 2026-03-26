@@ -99,132 +99,132 @@ class TestDispatchRead:
     def test_projects(self):
         client = mock.MagicMock()
         client.get_projects.return_value = []
-        result = dispatch(client, self._make_args(mode='projects'))
+        result = dispatch(client, self._make_args(mode='get-projects'))
         client.get_projects.assert_called_once()
         assert result == []
 
     def test_work_packages_all(self):
         client = mock.MagicMock()
         client.get_workpackages.return_value = []
-        args = self._make_args(mode='work-packages', query_id=None, project_id=None, status='all')
+        args = self._make_args(mode='get-work-packages', query_id=None, project_id=None, status='all')
         result = dispatch(client, args)
         client.get_workpackages.assert_called_once_with(status='all')
 
     def test_work_packages_by_project(self):
         client = mock.MagicMock()
         client.get_workpackages_by_project_id.return_value = []
-        args = self._make_args(mode='work-packages', query_id=None, project_id=5, status='open')
+        args = self._make_args(mode='get-work-packages', query_id=None, project_id=5, status='open')
         result = dispatch(client, args)
         client.get_workpackages_by_project_id.assert_called_once_with(5, status='open')
 
     def test_work_packages_by_query(self):
         client = mock.MagicMock()
         client.get_workpackages_by_query_id.return_value = []
-        args = self._make_args(mode='work-packages', query_id=99, project_id=None, status=None)
+        args = self._make_args(mode='get-work-packages', query_id=99, project_id=None, status=None)
         result = dispatch(client, args)
         client.get_workpackages_by_query_id.assert_called_once_with(99)
 
     def test_work_package_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='work-package', id=42)
+        args = self._make_args(mode='get-work-package', id=42)
         dispatch(client, args)
         client.get_workpackage.assert_called_once_with(42)
 
     def test_relations(self):
         client = mock.MagicMock()
         client.get_relations.return_value = []
-        dispatch(client, self._make_args(mode='relations'))
+        dispatch(client, self._make_args(mode='get-relations'))
         client.get_relations.assert_called_once()
 
     def test_relation_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='relation', id=100)
+        args = self._make_args(mode='get-relation', id=100)
         dispatch(client, args)
         client.get_relation.assert_called_once_with(100)
 
     def test_versions(self):
         client = mock.MagicMock()
         client.get_versions.return_value = []
-        dispatch(client, self._make_args(mode='versions'))
+        dispatch(client, self._make_args(mode='get-versions'))
         client.get_versions.assert_called_once()
 
     def test_version_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='version', id=7)
+        args = self._make_args(mode='get-version', id=7)
         dispatch(client, args)
         client.get_version.assert_called_once_with(7)
 
     def test_users(self):
         client = mock.MagicMock()
         client.get_users.return_value = []
-        dispatch(client, self._make_args(mode='users'))
+        dispatch(client, self._make_args(mode='get-users'))
         client.get_users.assert_called_once()
 
     def test_user_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='user', id=3)
+        args = self._make_args(mode='get-user', id=3)
         dispatch(client, args)
         client.get_user.assert_called_once_with(3)
 
     def test_placeholder_users(self):
         client = mock.MagicMock()
         client.get_placeholder_users.return_value = []
-        dispatch(client, self._make_args(mode='placeholder-users'))
+        dispatch(client, self._make_args(mode='get-placeholder-users'))
         client.get_placeholder_users.assert_called_once()
 
     def test_placeholder_user_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='placeholder-user', id=10)
+        args = self._make_args(mode='get-placeholder-user', id=10)
         dispatch(client, args)
         client.get_placeholder_user.assert_called_once_with(10)
 
     def test_memberships(self):
         client = mock.MagicMock()
         client.get_project_members.return_value = []
-        dispatch(client, self._make_args(mode='memberships'))
+        dispatch(client, self._make_args(mode='get-memberships'))
         client.get_project_members.assert_called_once()
 
     def test_membership_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='membership', id=20)
+        args = self._make_args(mode='get-membership', id=20)
         dispatch(client, args)
         client.get_project_member.assert_called_once_with(20)
 
     def test_statuses(self):
         client = mock.MagicMock()
         client.get_statuses.return_value = []
-        dispatch(client, self._make_args(mode='statuses'))
+        dispatch(client, self._make_args(mode='get-statuses'))
         client.get_statuses.assert_called_once()
 
     def test_status_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='status', id=1)
+        args = self._make_args(mode='get-status', id=1)
         dispatch(client, args)
         client.get_status.assert_called_once_with(1)
 
     def test_grids(self):
         client = mock.MagicMock()
         client.get_grids.return_value = []
-        args = self._make_args(mode='grids', scope=None)
+        args = self._make_args(mode='get-grids', scope=None)
         dispatch(client, args)
         client.get_grids.assert_called_once_with(scope=None)
 
     def test_grids_with_scope(self):
         client = mock.MagicMock()
         client.get_grids.return_value = []
-        args = self._make_args(mode='grids', scope='/projects/1/boards')
+        args = self._make_args(mode='get-grids', scope='/projects/1/boards')
         dispatch(client, args)
         client.get_grids.assert_called_once_with(scope='/projects/1/boards')
 
     def test_grid_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='grid', id=5)
+        args = self._make_args(mode='get-grid', id=5)
         dispatch(client, args)
         client.get_grid.assert_called_once_with(5)
 
     def test_query_single(self):
         client = mock.MagicMock()
-        args = self._make_args(mode='query', id=99)
+        args = self._make_args(mode='get-query', id=99)
         dispatch(client, args)
         client.get_query.assert_called_once_with(99)
 
@@ -236,79 +236,79 @@ class TestDispatchRead:
     def test_types(self):
         client = mock.MagicMock()
         client.get_types.return_value = []
-        dispatch(client, self._make_args(mode='types', project_id=None))
+        dispatch(client, self._make_args(mode='get-types', project_id=None))
         client.get_types.assert_called_once()
 
     def test_types_by_project(self):
         client = mock.MagicMock()
         client.get_types_by_project_id.return_value = []
-        dispatch(client, self._make_args(mode='types', project_id=5))
+        dispatch(client, self._make_args(mode='get-types', project_id=5))
         client.get_types_by_project_id.assert_called_once_with(5)
 
     def test_type_single(self):
         client = mock.MagicMock()
-        dispatch(client, self._make_args(mode='type', id=1))
+        dispatch(client, self._make_args(mode='get-type', id=1))
         client.get_type.assert_called_once_with(1)
 
     def test_priorities(self):
         client = mock.MagicMock()
         client.get_priorities.return_value = []
-        dispatch(client, self._make_args(mode='priorities'))
+        dispatch(client, self._make_args(mode='get-priorities'))
         client.get_priorities.assert_called_once()
 
     def test_priority_single(self):
         client = mock.MagicMock()
-        dispatch(client, self._make_args(mode='priority', id=2))
+        dispatch(client, self._make_args(mode='get-priority', id=2))
         client.get_priority.assert_called_once_with(2)
 
     def test_categories(self):
         client = mock.MagicMock()
         client.get_categories_by_project_id.return_value = []
-        dispatch(client, self._make_args(mode='categories', project_id=1))
+        dispatch(client, self._make_args(mode='get-categories', project_id=1))
         client.get_categories_by_project_id.assert_called_once_with(1)
 
     def test_category_single(self):
         client = mock.MagicMock()
-        dispatch(client, self._make_args(mode='category', id=3))
+        dispatch(client, self._make_args(mode='get-category', id=3))
         client.get_category.assert_called_once_with(3)
 
     def test_time_entries(self):
         client = mock.MagicMock()
         client.get_time_entries.return_value = []
-        dispatch(client, self._make_args(mode='time-entries', work_package_id=None, project_id=None))
+        dispatch(client, self._make_args(mode='get-time-entries', work_package_id=None, project_id=None))
         client.get_time_entries.assert_called_once()
 
     def test_time_entry_single(self):
         client = mock.MagicMock()
-        dispatch(client, self._make_args(mode='time-entry', id=50))
+        dispatch(client, self._make_args(mode='get-time-entry', id=50))
         client.get_time_entry.assert_called_once_with(50)
 
     def test_activities(self):
         client = mock.MagicMock()
         client.get_activities.return_value = []
-        dispatch(client, self._make_args(mode='activities', id=42))
+        dispatch(client, self._make_args(mode='get-activities', id=42))
         client.get_activities.assert_called_once_with(42)
 
     def test_attachments(self):
         client = mock.MagicMock()
         client.get_attachments_by_work_package.return_value = []
-        dispatch(client, self._make_args(mode='attachments', id=42))
+        dispatch(client, self._make_args(mode='get-attachments', id=42))
         client.get_attachments_by_work_package.assert_called_once_with(42)
 
     def test_attachment_single(self):
         client = mock.MagicMock()
-        dispatch(client, self._make_args(mode='attachment', id=33))
+        dispatch(client, self._make_args(mode='get-attachment', id=33))
         client.get_attachment.assert_called_once_with(33)
 
     def test_notifications(self):
         client = mock.MagicMock()
         client.get_notifications.return_value = []
-        dispatch(client, self._make_args(mode='notifications'))
+        dispatch(client, self._make_args(mode='get-notifications'))
         client.get_notifications.assert_called_once()
 
     def test_notification_single(self):
         client = mock.MagicMock()
-        dispatch(client, self._make_args(mode='notification', id=55))
+        dispatch(client, self._make_args(mode='get-notification', id=55))
         client.get_notification.assert_called_once_with(55)
 
 
@@ -575,54 +575,54 @@ class TestMainIntegration:
                     return instance
 
     def test_projects_text(self, capsys):
-        self._patch_and_run(["projects"], "get_projects", ["Project A", "Project B"])
+        self._patch_and_run(["get-projects"], "get_projects", ["Project A", "Project B"])
         out = capsys.readouterr().out
         assert "Project A" in out
         assert "Project B" in out
 
     def test_projects_json(self, capsys):
-        self._patch_and_run(["projects"], "get_projects", [{"name": "P1"}], json_flag=True)
+        self._patch_and_run(["get-projects"], "get_projects", [{"name": "P1"}], json_flag=True)
         out = capsys.readouterr().out
         parsed = json.loads(out)
         assert parsed[0]["name"] == "P1"
 
     def test_statuses_text(self, capsys):
-        self._patch_and_run(["statuses"], "get_statuses", ["New", "Closed"])
+        self._patch_and_run(["get-statuses"], "get_statuses", ["New", "Closed"])
         out = capsys.readouterr().out
         assert "New" in out
 
     def test_user_single(self, capsys):
-        self._patch_and_run(["user", "3"], "get_user", "User(3): Alice")
+        self._patch_and_run(["get-user", "3"], "get_user", "User(3): Alice")
         out = capsys.readouterr().out
         assert "Alice" in out
 
     def test_version_single(self, capsys):
-        self._patch_and_run(["version", "7"], "get_version", "Version(7): v1.0")
+        self._patch_and_run(["get-version", "7"], "get_version", "Version(7): v1.0")
         out = capsys.readouterr().out
         assert "v1.0" in out
 
     def test_work_package_single(self, capsys):
-        self._patch_and_run(["work-package", "42"], "get_workpackage", "WP(42): Fix it")
+        self._patch_and_run(["get-work-package", "42"], "get_workpackage", "WP(42): Fix it")
         out = capsys.readouterr().out
         assert "Fix it" in out
 
     def test_relation_single(self, capsys):
-        self._patch_and_run(["relation", "100"], "get_relation", "Relation(100)")
+        self._patch_and_run(["get-relation", "100"], "get_relation", "Relation(100)")
         out = capsys.readouterr().out
         assert "100" in out
 
     def test_membership_single(self, capsys):
-        self._patch_and_run(["membership", "20"], "get_project_member", "Membership(20)")
+        self._patch_and_run(["get-membership", "20"], "get_project_member", "Membership(20)")
         out = capsys.readouterr().out
         assert "20" in out
 
     def test_grid_single(self, capsys):
-        self._patch_and_run(["grid", "5"], "get_grid", "Grid(5)")
+        self._patch_and_run(["get-grid", "5"], "get_grid", "Grid(5)")
         out = capsys.readouterr().out
         assert "5" in out
 
     def test_query_single(self, capsys):
-        self._patch_and_run(["query", "99"], "get_query", "Query(99)")
+        self._patch_and_run(["get-query", "99"], "get_query", "Query(99)")
         out = capsys.readouterr().out
         assert "99" in out
 
@@ -641,7 +641,7 @@ class TestMainIntegration:
         env = _env(OPENPROJECT_BASEURL="https://op.example.com/",
                     OPENPROJECT_APIKEY="test-key")
         with mock.patch.dict(os.environ, env, clear=True):
-            with mock.patch("sys.argv", ["openproject-cli", "projects"]):
+            with mock.patch("sys.argv", ["openproject-cli", "get-projects"]):
                 with mock.patch("openproject_api_client.ApiClient") as MockClient:
                     MockClient.return_value.get_projects.side_effect = opc.ApiError("fail")
                     with pytest.raises(SystemExit) as exc_info:
@@ -653,7 +653,7 @@ class TestMainIntegration:
         env = _env(OPENPROJECT_BASEURL="https://op.example.com/",
                     OPENPROJECT_APIKEY="test-key")
         with mock.patch.dict(os.environ, env, clear=True):
-            with mock.patch("sys.argv", ["openproject-cli", "projects"]):
+            with mock.patch("sys.argv", ["openproject-cli", "get-projects"]):
                 with mock.patch("openproject_api_client.ApiClient") as MockClient:
                     MockClient.return_value.get_projects.side_effect = opc.RequestError("fail")
                     with pytest.raises(SystemExit) as exc_info:

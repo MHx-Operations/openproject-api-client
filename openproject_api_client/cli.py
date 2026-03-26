@@ -20,34 +20,34 @@ OUTPUT
   Use --json for machine-parseable JSON output (recommended for scripts).
 
 READ COMMANDS
-  openproject-cli projects                          List all projects (with hierarchy)
-  openproject-cli work-packages                     List all work packages (default: all)
-  openproject-cli work-packages --status open       Filter by status: all, open, closed
-  openproject-cli work-packages --project-id 5      Filter by project
-  openproject-cli work-packages --query-id 99       Use a saved query
-  openproject-cli work-package 42                   Get single work package by ID
-  openproject-cli types                             List all work package types
-  openproject-cli types --project-id 5              Types available in a project
-  openproject-cli priorities                        List all priorities
-  openproject-cli statuses                          List all statuses (get IDs for updates)
-  openproject-cli categories --project-id 5         List categories for a project
-  openproject-cli users                             List all users (get IDs for assignments)
-  openproject-cli versions                          List all versions/milestones
-  openproject-cli relations                         List all relations
-  openproject-cli memberships                       List all project memberships
-  openproject-cli time-entries                      List all time entries
-  openproject-cli time-entries --work-package-id 42 Filter by work package
-  openproject-cli time-entries --project-id 5       Filter by project
-  openproject-cli activities 42                     List activities for a work package
-  openproject-cli attachments 42                    List attachments for a work package
-  openproject-cli notifications                     List notifications
-  openproject-cli grids                             List all grids/boards
-  openproject-cli grids --scope /projects/1/boards  Filter grids by scope
-  openproject-cli placeholder-users                 List placeholder users
+  openproject-cli get-projects                          List all projects (with hierarchy)
+  openproject-cli get-work-packages                     List all work packages (default: all)
+  openproject-cli get-work-packages --status open       Filter by status: all, open, closed
+  openproject-cli get-work-packages --project-id 5      Filter by project
+  openproject-cli get-work-packages --query-id 99       Use a saved query
+  openproject-cli get-work-package 42                   Get single work package by ID
+  openproject-cli get-types                             List all work package types
+  openproject-cli get-types --project-id 5              Types available in a project
+  openproject-cli get-priorities                        List all priorities
+  openproject-cli get-statuses                          List all statuses (get IDs for updates)
+  openproject-cli get-categories --project-id 5         List categories for a project
+  openproject-cli get-users                             List all users (get IDs for assignments)
+  openproject-cli get-versions                          List all versions/milestones
+  openproject-cli get-relations                         List all relations
+  openproject-cli get-memberships                       List all project memberships
+  openproject-cli get-time-entries                      List all time entries
+  openproject-cli get-time-entries --work-package-id 42 Filter by work package
+  openproject-cli get-time-entries --project-id 5       Filter by project
+  openproject-cli get-activities 42                     List activities for a work package
+  openproject-cli get-attachments 42                    List attachments for a work package
+  openproject-cli get-notifications                     List notifications
+  openproject-cli get-grids                             List all grids/boards
+  openproject-cli get-grids --scope /projects/1/boards  Filter grids by scope
+  openproject-cli get-placeholder-users                 List placeholder users
 
-  Single-resource: relation, version, user, placeholder-user, membership,
-                   status, grid, query, type, priority, category,
-                   time-entry, attachment, notification
+  Single-resource: get-relation, get-version, get-user, get-placeholder-user, get-membership,
+                   get-status, get-grid, get-query, get-type, get-priority, get-category,
+                   get-time-entry, get-attachment, get-notification
 
 WRITE COMMANDS
   openproject-cli create-work-package --project-id 1 --subject "Title" \\
@@ -84,14 +84,14 @@ DELETE COMMANDS
 
 TYPICAL AI-AGENT WORKFLOW
   1. Discover context:
-     openproject-cli --json types              # get type IDs (Task, Bug, ...)
-     openproject-cli --json priorities          # get priority IDs
-     openproject-cli --json statuses            # get status IDs
-     openproject-cli --json users               # get user IDs
-     openproject-cli --json projects            # get project IDs
+     openproject-cli --json get-types              # get type IDs (Task, Bug, ...)
+     openproject-cli --json get-priorities          # get priority IDs
+     openproject-cli --json get-statuses            # get status IDs
+     openproject-cli --json get-users               # get user IDs
+     openproject-cli --json get-projects            # get project IDs
 
   2. Read work packages:
-     openproject-cli --json work-packages --project-id 5 --status open
+     openproject-cli --json get-work-packages --project-id 5 --status open
 
   3. Update status:
      openproject-cli --json update-work-package 42 --status-id 7
@@ -143,92 +143,92 @@ def main():
 
     # -- read commands -----------------------------------------------------
 
-    subparsers.add_parser('projects', help='list all projects')
+    subparsers.add_parser('get-projects', help='list all projects')
 
-    sp_wp = subparsers.add_parser('work-packages', help='list work packages')
+    sp_wp = subparsers.add_parser('get-work-packages', help='list work packages')
     sp_wp.add_argument('--project-id', type=int, help='filter by project id')
     sp_wp.add_argument('--query-id', type=int, help='fetch by saved query id')
     sp_wp.add_argument('--status', choices=['all', 'open', 'closed'], default=None,
                        help='filter by status')
 
-    sp_wp_single = subparsers.add_parser('work-package', help='get a single work package')
+    sp_wp_single = subparsers.add_parser('get-work-package', help='get a single work package')
     sp_wp_single.add_argument('id', type=int, help='work package id')
 
-    sp_types = subparsers.add_parser('types', help='list all work package types')
+    sp_types = subparsers.add_parser('get-types', help='list all work package types')
     sp_types.add_argument('--project-id', type=int, help='filter by project id')
 
-    sp_type = subparsers.add_parser('type', help='get a single type')
+    sp_type = subparsers.add_parser('get-type', help='get a single type')
     sp_type.add_argument('id', type=int, help='type id')
 
-    subparsers.add_parser('priorities', help='list all priorities')
+    subparsers.add_parser('get-priorities', help='list all priorities')
 
-    sp_priority = subparsers.add_parser('priority', help='get a single priority')
+    sp_priority = subparsers.add_parser('get-priority', help='get a single priority')
     sp_priority.add_argument('id', type=int, help='priority id')
 
-    sp_categories = subparsers.add_parser('categories', help='list categories for a project')
+    sp_categories = subparsers.add_parser('get-categories', help='list categories for a project')
     sp_categories.add_argument('--project-id', type=int, required=True, help='project id')
 
-    sp_category = subparsers.add_parser('category', help='get a single category')
+    sp_category = subparsers.add_parser('get-category', help='get a single category')
     sp_category.add_argument('id', type=int, help='category id')
 
-    subparsers.add_parser('relations', help='list all relations')
+    subparsers.add_parser('get-relations', help='list all relations')
 
-    sp_relation = subparsers.add_parser('relation', help='get a single relation')
+    sp_relation = subparsers.add_parser('get-relation', help='get a single relation')
     sp_relation.add_argument('id', type=int, help='relation id')
 
-    subparsers.add_parser('versions', help='list all versions')
+    subparsers.add_parser('get-versions', help='list all versions')
 
-    sp_version = subparsers.add_parser('version', help='get a single version')
+    sp_version = subparsers.add_parser('get-version', help='get a single version')
     sp_version.add_argument('id', type=int, help='version id')
 
-    subparsers.add_parser('users', help='list all users')
+    subparsers.add_parser('get-users', help='list all users')
 
-    sp_user = subparsers.add_parser('user', help='get a single user')
+    sp_user = subparsers.add_parser('get-user', help='get a single user')
     sp_user.add_argument('id', type=int, help='user id')
 
-    subparsers.add_parser('placeholder-users', help='list all placeholder users')
+    subparsers.add_parser('get-placeholder-users', help='list all placeholder users')
 
-    sp_ph_user = subparsers.add_parser('placeholder-user', help='get a single placeholder user')
+    sp_ph_user = subparsers.add_parser('get-placeholder-user', help='get a single placeholder user')
     sp_ph_user.add_argument('id', type=int, help='placeholder user id')
 
-    subparsers.add_parser('memberships', help='list all memberships')
+    subparsers.add_parser('get-memberships', help='list all memberships')
 
-    sp_member = subparsers.add_parser('membership', help='get a single membership')
+    sp_member = subparsers.add_parser('get-membership', help='get a single membership')
     sp_member.add_argument('id', type=int, help='membership id')
 
-    subparsers.add_parser('statuses', help='list all statuses')
+    subparsers.add_parser('get-statuses', help='list all statuses')
 
-    sp_status = subparsers.add_parser('status', help='get a single status')
+    sp_status = subparsers.add_parser('get-status', help='get a single status')
     sp_status.add_argument('id', type=int, help='status id')
 
-    sp_time_entries = subparsers.add_parser('time-entries', help='list time entries')
+    sp_time_entries = subparsers.add_parser('get-time-entries', help='list time entries')
     sp_time_entries.add_argument('--work-package-id', type=int, help='filter by work package')
     sp_time_entries.add_argument('--project-id', type=int, help='filter by project')
 
-    sp_time_entry = subparsers.add_parser('time-entry', help='get a single time entry')
+    sp_time_entry = subparsers.add_parser('get-time-entry', help='get a single time entry')
     sp_time_entry.add_argument('id', type=int, help='time entry id')
 
-    sp_activities = subparsers.add_parser('activities', help='list activities for a work package')
+    sp_activities = subparsers.add_parser('get-activities', help='list activities for a work package')
     sp_activities.add_argument('id', type=int, help='work package id')
 
-    sp_attachments = subparsers.add_parser('attachments', help='list attachments for a work package')
+    sp_attachments = subparsers.add_parser('get-attachments', help='list attachments for a work package')
     sp_attachments.add_argument('id', type=int, help='work package id')
 
-    sp_attachment = subparsers.add_parser('attachment', help='get a single attachment')
+    sp_attachment = subparsers.add_parser('get-attachment', help='get a single attachment')
     sp_attachment.add_argument('id', type=int, help='attachment id')
 
-    subparsers.add_parser('notifications', help='list notifications')
+    subparsers.add_parser('get-notifications', help='list notifications')
 
-    sp_notification = subparsers.add_parser('notification', help='get a single notification')
+    sp_notification = subparsers.add_parser('get-notification', help='get a single notification')
     sp_notification.add_argument('id', type=int, help='notification id')
 
-    sp_grids = subparsers.add_parser('grids', help='list all grids')
+    sp_grids = subparsers.add_parser('get-grids', help='list all grids')
     sp_grids.add_argument('--scope', help='filter by scope')
 
-    sp_grid = subparsers.add_parser('grid', help='get a single grid')
+    sp_grid = subparsers.add_parser('get-grid', help='get a single grid')
     sp_grid.add_argument('id', type=int, help='grid id')
 
-    sp_query = subparsers.add_parser('query', help='get a single query')
+    sp_query = subparsers.add_parser('get-query', help='get a single query')
     sp_query.add_argument('id', type=int, help='query id')
 
     # -- write commands ----------------------------------------------------
@@ -374,10 +374,10 @@ def dispatch(client, args):
     mode = args.mode
 
     # read commands
-    if mode == 'projects':
+    if mode == 'get-projects':
         return client.get_projects()
 
-    elif mode == 'work-packages':
+    elif mode == 'get-work-packages':
         if args.query_id:
             return client.get_workpackages_by_query_id(args.query_id)
         elif args.project_id:
@@ -385,96 +385,96 @@ def dispatch(client, args):
         else:
             return client.get_workpackages(status=args.status)
 
-    elif mode == 'work-package':
+    elif mode == 'get-work-package':
         return client.get_workpackage(args.id)
 
-    elif mode == 'types':
+    elif mode == 'get-types':
         if args.project_id:
             return client.get_types_by_project_id(args.project_id)
         return client.get_types()
 
-    elif mode == 'type':
+    elif mode == 'get-type':
         return client.get_type(args.id)
 
-    elif mode == 'priorities':
+    elif mode == 'get-priorities':
         return client.get_priorities()
 
-    elif mode == 'priority':
+    elif mode == 'get-priority':
         return client.get_priority(args.id)
 
-    elif mode == 'categories':
+    elif mode == 'get-categories':
         return client.get_categories_by_project_id(args.project_id)
 
-    elif mode == 'category':
+    elif mode == 'get-category':
         return client.get_category(args.id)
 
-    elif mode == 'relations':
+    elif mode == 'get-relations':
         return client.get_relations()
 
-    elif mode == 'relation':
+    elif mode == 'get-relation':
         return client.get_relation(args.id)
 
-    elif mode == 'versions':
+    elif mode == 'get-versions':
         return client.get_versions()
 
-    elif mode == 'version':
+    elif mode == 'get-version':
         return client.get_version(args.id)
 
-    elif mode == 'users':
+    elif mode == 'get-users':
         return client.get_users()
 
-    elif mode == 'user':
+    elif mode == 'get-user':
         return client.get_user(args.id)
 
-    elif mode == 'placeholder-users':
+    elif mode == 'get-placeholder-users':
         return client.get_placeholder_users()
 
-    elif mode == 'placeholder-user':
+    elif mode == 'get-placeholder-user':
         return client.get_placeholder_user(args.id)
 
-    elif mode == 'memberships':
+    elif mode == 'get-memberships':
         return client.get_project_members()
 
-    elif mode == 'membership':
+    elif mode == 'get-membership':
         return client.get_project_member(args.id)
 
-    elif mode == 'statuses':
+    elif mode == 'get-statuses':
         return client.get_statuses()
 
-    elif mode == 'status':
+    elif mode == 'get-status':
         return client.get_status(args.id)
 
-    elif mode == 'time-entries':
+    elif mode == 'get-time-entries':
         return client.get_time_entries(
             work_package_id=args.work_package_id,
             project_id=args.project_id,
         )
 
-    elif mode == 'time-entry':
+    elif mode == 'get-time-entry':
         return client.get_time_entry(args.id)
 
-    elif mode == 'activities':
+    elif mode == 'get-activities':
         return client.get_activities(args.id)
 
-    elif mode == 'attachments':
+    elif mode == 'get-attachments':
         return client.get_attachments_by_work_package(args.id)
 
-    elif mode == 'attachment':
+    elif mode == 'get-attachment':
         return client.get_attachment(args.id)
 
-    elif mode == 'notifications':
+    elif mode == 'get-notifications':
         return client.get_notifications()
 
-    elif mode == 'notification':
+    elif mode == 'get-notification':
         return client.get_notification(args.id)
 
-    elif mode == 'grids':
+    elif mode == 'get-grids':
         return client.get_grids(scope=args.scope)
 
-    elif mode == 'grid':
+    elif mode == 'get-grid':
         return client.get_grid(args.id)
 
-    elif mode == 'query':
+    elif mode == 'get-query':
         return client.get_query(args.id)
 
     # write commands
