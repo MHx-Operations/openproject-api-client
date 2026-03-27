@@ -58,6 +58,9 @@ client.delete_relation(100)
 export OPENPROJECT_BASEURL="https://openproject.example.com/"
 export OPENPROJECT_APIKEY="your-api-key"
 
+# without installation (from repo root)
+python -m openproject_api_client.cli --json get-projects
+
 # show full usage guide (for humans and AI agents)
 openproject-cli guide
 

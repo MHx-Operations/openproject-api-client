@@ -508,9 +508,12 @@ class ApiClient:
             return list(result)
         return []
 
-    def get_notifications(self) -> list[res.Notification]:
+    def get_notifications(self, *, unread_only: bool = False) -> list[res.Notification]:
         """Fetch all notifications for the current user."""
-        return self.get_paged_collection("notifications", page_size=100)
+        payload = {}
+        if unread_only:
+            payload['filters'] = '[{"readIAN":{"operator":"=","values":["f"]}}]'
+        return self.get_paged_collection("notifications", page_size=100, payload=payload)
 
     def get_notification(self, notification_id: int) -> res.Notification:
         """Fetch a single notification by ID."""

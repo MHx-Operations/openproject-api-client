@@ -41,6 +41,7 @@ READ COMMANDS
   openproject-cli get-activities 42                     List activities for a work package
   openproject-cli get-attachments 42                    List attachments for a work package
   openproject-cli get-notifications                     List notifications
+  openproject-cli get-notifications --unread             List unread notifications only
   openproject-cli get-grids                             List all grids/boards
   openproject-cli get-grids --scope /projects/1/boards  Filter grids by scope
   openproject-cli get-placeholder-users                 List placeholder users
@@ -217,7 +218,8 @@ def main():
     sp_attachment = subparsers.add_parser('get-attachment', help='get a single attachment')
     sp_attachment.add_argument('id', type=int, help='attachment id')
 
-    subparsers.add_parser('get-notifications', help='list notifications')
+    sp_notifications = subparsers.add_parser('get-notifications', help='list notifications')
+    sp_notifications.add_argument('--unread', action='store_true', help='only show unread notifications')
 
     sp_notification = subparsers.add_parser('get-notification', help='get a single notification')
     sp_notification.add_argument('id', type=int, help='notification id')
@@ -326,6 +328,11 @@ def main():
     sp_del_att.add_argument('id', type=int, help='attachment id')
 
     args = parser.parse_args()
+
+    # no subcommand → print usage
+    if not args.mode:
+        parser.print_help()
+        return
 
     # guide does not need credentials
     if args.mode == 'guide':
@@ -463,7 +470,7 @@ def dispatch(client, args):
         return client.get_attachment(args.id)
 
     elif mode == 'get-notifications':
-        return client.get_notifications()
+        return client.get_notifications(unread_only=args.unread)
 
     elif mode == 'get-notification':
         return client.get_notification(args.id)
@@ -596,3 +603,7 @@ def _obj_to_dict(obj):
         else:
             d[k] = v
     return d
+
+
+if __name__ == "__main__":
+    main()
