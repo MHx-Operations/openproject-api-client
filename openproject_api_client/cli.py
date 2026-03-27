@@ -329,11 +329,6 @@ def main():
 
     args = parser.parse_args()
 
-    # no subcommand → print usage
-    if not args.mode:
-        parser.print_help()
-        return
-
     # guide does not need credentials
     if args.mode == 'guide':
         print(GUIDE_TEXT)
@@ -354,6 +349,10 @@ def main():
 
     if not apikey:
         raise Exception('specify API key with env:OPENPROJECT_APIKEY or by --apikey argument')
+
+    # no subcommand → nothing to do
+    if not args.mode:
+        return
 
     client = opc.ApiClient(baseurl, apikey)
 
