@@ -176,7 +176,7 @@ class ApiClient:
             )
         return True
 
-    def get_paged_collection(self, resource: str, payload: object = None, page_size: int = 5) -> list[res.GenericType]:
+    def get_paged_collection(self, resource: str, payload: object = None, page_size: int = 100) -> list[res.GenericType]:
         elements = []
 
         payload = payload or {}
