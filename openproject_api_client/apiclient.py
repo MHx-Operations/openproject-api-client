@@ -32,7 +32,9 @@ class ApiClient:
         work_packages = client.get_workpackages(status='open')
     """
 
-    def __init__(self, base_url, apikey):
+    def __init__(self, base_url, apikey, *,
+                 timeout: float | None = None,
+                 verify_ssl: bool | str = True):
 
         if not base_url:
             raise ApiError('base_url must not be null')
@@ -44,6 +46,8 @@ class ApiClient:
         self.base_url = base_url
         self.apikey = apikey
         self.auth = HTTPBasicAuth('apikey', apikey)
+        self._timeout = timeout
+        self._verify_ssl = verify_ssl
 
         if not self.base_url.endswith('/'):
             self.base_url += '/'
