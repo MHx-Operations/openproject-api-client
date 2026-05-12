@@ -9,8 +9,8 @@ Requirements for the hardening milestone. All changes must be non-breaking with 
 
 ### Security (SEC)
 
-- [ ] **SEC-01**: `ApiClient.__init__` accepts an optional `timeout` kwarg (seconds). Default `None` preserves current behavior (no timeout). When set, `timeout` is passed on every `requests.*` call.
-- [ ] **SEC-02**: `ApiClient.__init__` accepts an optional `verify_ssl` kwarg (`True` | `False` | path to CA bundle). Default `True` (current behavior). Passed to every `requests.*` call.
+- [x] **SEC-01**: `ApiClient.__init__` accepts an optional `timeout` kwarg (seconds). Default `None` preserves current behavior (no timeout). When set, `timeout` is passed on every `requests.*` call.
+- [x] **SEC-02**: `ApiClient.__init__` accepts an optional `verify_ssl` kwarg (`True` | `False` | path to CA bundle). Default `True` (current behavior). Passed to every `requests.*` call.
 - [ ] **SEC-03**: The API key is stored on a private attribute (e.g. `self._apikey`) instead of `self.apikey`. A public `self.apikey` accessor remains for backwards compatibility but does not appear in `repr()` / `vars()` output for casual logging.
 - [ ] **SEC-04**: DEBUG-level logging never includes the `Authorization` header or any rendered form of the API key. A regression test asserts that `caplog` output from a known request contains no substring of the test key.
 
@@ -84,8 +84,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | BUG-03 | Phase 1 | Complete |
 | BUG-04 | Phase 1 | Complete |
 | BUG-05 | Phase 1 | Complete |
-| SEC-01 | Phase 2 | Pending |
-| SEC-02 | Phase 2 | Pending |
+| SEC-01 | Phase 2 | Complete |
+| SEC-02 | Phase 2 | Complete |
 | SEC-03 | Phase 2 | Pending |
 | SEC-04 | Phase 2 | Pending |
 | PERF-01 | Phase 3 | Pending |

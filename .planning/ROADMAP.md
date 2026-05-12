@@ -46,7 +46,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — SEC-01 + SEC-02: Opt-in keyword-only timeout and verify_ssl kwargs propagated to all four http_* methods
+- [x] 02-01-PLAN.md — SEC-01 + SEC-02: Opt-in keyword-only timeout and verify_ssl kwargs propagated to all four http_* methods (completed 2026-05-12)
 - [ ] 02-02-PLAN.md — SEC-03 + SEC-04: Private _apikey storage with backwards-compat apikey @property, masking __repr__, and caplog regression test asserting no key substring in DEBUG output
 
 ### Phase 3: Performance Baseline

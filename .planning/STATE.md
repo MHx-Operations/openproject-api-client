@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v0.2
 milestone_name: milestone
-current_phase: 01
-status: Phase 01 complete
-last_updated: "2026-05-12T21:10:49.417Z"
+current_phase: 02
+status: Phase 02 in progress
+last_updated: "2026-05-12T22:09:00.000Z"
 progress:
   total_phases: 4
   completed_phases: 1
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_plans: 7
+  completed_plans: 5
+  percent: 71
 ---
 
 # State
@@ -18,7 +18,7 @@ progress:
 **Project:** openproject-api-client
 **Initialized:** 2026-05-12
 **Current Milestone:** v0.3 Hardening
-**Current Phase:** 01
+**Current Phase:** 02
 
 ## Quick Links
 
@@ -42,7 +42,7 @@ progress:
 | Phase | Title | Status |
 |-------|-------|--------|
 | 1 | Latent Bug Fixes | Complete (3/3 plans complete) |
-| 2 | Security Baseline | Not started |
+| 2 | Security Baseline | In progress (1/2 plans complete) |
 | 3 | Performance Baseline | Not started |
 | 4 | Test Gap Closure | Not started |
 
@@ -53,10 +53,12 @@ progress:
 - BUG-03: drop `debug=True` from `Query.__init__` entirely; `False` is the `GenericType` default and is redundant (2026-05-12)
 - BUG-04: unknown status strings are a silent no-op + DEBUG log; not a `ValueError` — matches pre-existing behavior (2026-05-12)
 - BUG-05: do NOT widen `get_workpackages_by_query_id` signature with `page_size` param; PERF item deferred to Phase 3 (2026-05-12)
+- SEC-01/SEC-02: `timeout` kwarg default is `None` (not 30s); `verify_ssl` default is `True`; both are opt-in to avoid breaking v0.2.x callers (2026-05-12)
+- SEC-01/SEC-02: requests `verify=` kwarg (not `verify_ssl=`) is the correct parameter name for the requests library (2026-05-12)
 
 ## Next Action
 
-Phase 01 complete. Run `/gsd-verify-work` on phase 01.
+Phase 02, Plan 02 (02-02-PLAN.md — SEC-03, SEC-04: apikey hardening) ready to execute.
 
 ---
-*Last updated: 2026-05-12 after completing 01-03-PLAN.md (BUG-03, BUG-04, BUG-05)*
+*Last updated: 2026-05-12 after completing 02-01-PLAN.md (SEC-01, SEC-02)*
