@@ -252,24 +252,62 @@ class ApiClient:
         """
         get all projects as dict
 
-        :return: dict of all project with id as key
+        Builds a parent->children index in one pass and then descends from root
+        projects, carrying the accumulated path and path_ids forward to each
+        child.  This gives O(n) time and O(n) space instead of the previous
+        O(n²) per-node parent-chain walk.
+
+        Cycle guard: a visited set prevents infinite loops if the server returns
+        a cyclic parent relationship (defensive; the API should not produce
+        cycles, but the old implementation would have hung in that case).
+
+        :return: dict of all projects with id as key
         """
         projects = self.get_paged_collection('projects', page_size=100)
-        project_map = {}
+
+        # Pass 1: id → project object
+        project_map = {p.id: p for p in projects}
+
+        # Pass 2: parent_id → [child, …]
+        children_by_parent: dict = {}
         for p in projects:
-            project_map[p.id] = p
+            children_by_parent.setdefault(p.parent_id, []).append(p)
 
-        for i in project_map:
-            p = project_map[i]
+        # Initialise every project with root-node defaults (so orphan nodes
+        # or nodes whose parent is not in the map are left with sane values).
+        for p in projects:
+            p.path_ids = []
+            p.path = []
+            p.level = 1
+            p.fullname = p.name
 
-            while p.parent_id:
-                project_map[i].path_ids.insert(0, p.parent_id)
-                project_map[i].path.insert(0, project_map[p.parent_id].name)
+        # Pass 3: iterative top-down descent from roots.
+        # Root == parent_id is falsy OR parent is not in project_map.
+        visited: set = set()
+        stack = []
+        for p in projects:
+            if not p.parent_id or p.parent_id not in project_map:
+                stack.append((p, [], []))
 
-                p = project_map[p.parent_id]
+        while stack:
+            node, parent_path_ids, parent_path = stack.pop()
 
-            project_map[i].level = len(project_map[i].path_ids) + 1
-            project_map[i].fullname = '/'.join(project_map[i].path + [project_map[i].name])
+            if node.id in visited:
+                # Cycle detected — skip to avoid infinite loop.
+                logger.warning(
+                    "Cycle detected in project hierarchy at project id=%s; skipping subtree.",
+                    node.id,
+                )
+                continue
+            visited.add(node.id)
+
+            # Propagate path info to each child of this node.
+            for child in children_by_parent.get(node.id, []):
+                child.path_ids = parent_path_ids + [node.id]
+                child.path = parent_path + [node.name]
+                child.level = len(child.path_ids) + 1
+                child.fullname = '/'.join(child.path + [child.name])
+                stack.append((child, child.path_ids, child.path))
 
         return project_map
 
