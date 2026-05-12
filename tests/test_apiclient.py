@@ -1207,6 +1207,39 @@ class TestNewReadEndpoints:
         assert len(atts) == 1
 
 
+# -- API key privacy (SEC-03) ----------------------------------------------
+
+class TestApiKeyPrivacy:
+    def test_private_storage(self):
+        c = ApiClient(BASE_URL, API_KEY)
+        assert c._apikey == API_KEY
+
+    def test_backwards_compat_property(self):
+        c = ApiClient(BASE_URL, API_KEY)
+        assert c.apikey == API_KEY
+        assert isinstance(type(c).__dict__['apikey'], property)
+
+    def test_property_is_readonly(self):
+        c = ApiClient(BASE_URL, API_KEY)
+        with pytest.raises(AttributeError):
+            c.apikey = "new"
+
+    def test_apikey_not_in_instance_dict(self):
+        c = ApiClient(BASE_URL, API_KEY)
+        assert 'apikey' not in vars(c)
+
+    def test_repr_masks_apikey(self):
+        c = ApiClient(BASE_URL, API_KEY)
+        r = repr(c)
+        assert API_KEY not in r
+        assert '***' in r
+        assert BASE_URL in r
+
+    def test_auth_object_still_carries_key(self):
+        c = ApiClient(BASE_URL, API_KEY)
+        assert c.auth.password == API_KEY
+
+
 # -- Time entry write methods -----------------------------------------------
 
 class TestTimeEntryWrite:
