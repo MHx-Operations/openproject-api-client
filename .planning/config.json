@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "workflow": {
+    "granularity": "coarse",
+    "research": false,
+    "plan_check": true,
+    "verify": true,
+    "parallel_execution": true,
+    "commit_docs": true,
+    "text_mode": false
+  },
+  "agents": {
+    "researcher_model": "sonnet",
+    "synthesizer_model": "sonnet",
+    "roadmapper_model": "sonnet",
+    "planner_model": "sonnet",
+    "executor_model": "sonnet"
+  },
+  "milestone": {
+    "name": "v0.3 Hardening",
+    "version_bump": "minor",
+    "breaking_changes_allowed": false
+  }
+}
