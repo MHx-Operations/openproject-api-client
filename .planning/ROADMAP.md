@@ -9,7 +9,7 @@ v0.3 Hardening milestone for the openproject-api-client Python library. The jour
 **Phase Numbering:**
 - Integer phases (1, 2, 3, 4): Planned milestone work
 
-- [ ] **Phase 1: Latent Bug Fixes** - Eliminate known parsing/collection latent bugs without changing public API behavior
+- [x] **Phase 1: Latent Bug Fixes** - Eliminate known parsing/collection latent bugs without changing public API behavior (completed 2026-05-12)
 - [ ] **Phase 2: Security Baseline** - Add opt-in `timeout` and `verify_ssl` kwargs; private apikey storage; no key in DEBUG logs
 - [ ] **Phase 3: Performance Baseline** - `requests.Session` reuse, raised default `page_size`, O(n) project hierarchy builder
 - [ ] **Phase 4: Test Gap Closure** - Add tests for the gaps catalogued in `.planning/codebase/CONCERNS.md`
@@ -32,7 +32,7 @@ v0.3 Hardening milestone for the openproject-api-client Python library. The jour
 Plans:
 - [x] 01-01-PLAN.md — BUG-01: Default Collection._items to [] for safe empty-iteration
 - [x] 01-02-PLAN.md — BUG-02: Centralize href ID parsing into _parse_href_id helper (None/empty/URN safe)
-- [ ] 01-03-PLAN.md — BUG-03 + BUG-04 + BUG-05: Remove Query debug=True; lock unknown-status behavior; align query-id pagination empty handling
+- [x] 01-03-PLAN.md — BUG-03 + BUG-04 + BUG-05: Remove Query debug=True; lock unknown-status behavior; align query-id pagination empty handling
 
 ### Phase 2: Security Baseline
 **Goal**: Make safe-by-default behavior reachable for callers via opt-in kwargs; eliminate the API-key leakage risk in DEBUG logs.
