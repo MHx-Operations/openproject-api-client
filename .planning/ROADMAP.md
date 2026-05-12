@@ -1,87 +1,75 @@
-# Roadmap: openproject-api-client v0.3 Hardening
+# Roadmap: openproject-api-client
 
-**Milestone:** v0.3 Hardening
-**Created:** 2026-05-12
-**Granularity:** Coarse (4 phases)
-**Strategy:** Bug fixes first (no new API), then opt-in security knobs, then performance, then test gap closure to lock in everything.
+## Overview
 
-## Phase Sequencing
+v0.3 Hardening milestone for the openproject-api-client Python library. The journey is from a v0.2 baseline with documented concerns (timeouts missing, no Session reuse, several latent parsing bugs, test gaps) to a v0.3.0 release that is safe-by-default-opt-in, performant for bulk scripting, and free of the known latent bugs — all without breaking the v0.2.x public API. Four coarse phases: bugs first (no new API), then opt-in security knobs, then performance, then test gap closure to lock everything in.
 
-```
-Phase 1 (Latent bugs) ──► Phase 2 (Security knobs) ──► Phase 3 (Performance)
-                                                            │
-                                                            ▼
-                                                   Phase 4 (Test gap closure)
-```
+## Phases
 
-Phase 4 lands last so its tests can reference behavior introduced in Phases 1–3.
+**Phase Numbering:**
+- Integer phases (1, 2, 3, 4): Planned milestone work
 
-## Phase 1 — Latent Bug Fixes
+- [ ] **Phase 1: Latent Bug Fixes** - Eliminate known parsing/collection latent bugs without changing public API behavior
+- [ ] **Phase 2: Security Baseline** - Add opt-in `timeout` and `verify_ssl` kwargs; private apikey storage; no key in DEBUG logs
+- [ ] **Phase 3: Performance Baseline** - `requests.Session` reuse, raised default `page_size`, O(n) project hierarchy builder
+- [ ] **Phase 4: Test Gap Closure** - Add tests for the gaps catalogued in `.planning/codebase/CONCERNS.md`
 
-**Goal:** Eliminate the known latent bugs in resource parsing and collection iteration without changing any public API behavior in the common path.
+## Phase Details
 
-**Requirements covered:** BUG-01, BUG-02, BUG-03, BUG-04, BUG-05
+### Phase 1: Latent Bug Fixes
+**Goal**: Eliminate the known latent bugs in resource parsing and collection iteration without changing any public API behavior in the common path.
+**Depends on**: Nothing (first phase)
+**Requirements**: BUG-01, BUG-02, BUG-03, BUG-04, BUG-05
+**Success Criteria** (what must be TRUE):
+  1. Iterating a `Collection` whose response omitted `_embedded.elements` is safe and yields zero elements (no `TypeError`).
+  2. Resource href parsing returns `None` for `None`, empty, and URN-style hrefs instead of raising `ValueError`.
+  3. `Query` instances no longer carry a raw `json` attribute by default — CLI JSON output for queries no longer leaks raw `_links`/`_embedded` blobs.
+  4. `get_workpackages(status=...)` has documented, tested behavior for unknown status strings.
+  5. `get_workpackages_by_query_id` shares the same empty-collection handling as `get_paged_collection`.
+  6. The existing test suite passes on the Python 3.9 – 3.13 matrix.
+**Plans**: 3 plans
 
-**Success criteria:**
-- `Collection._items` defaults to `[]`; iteration of an empty collection is safe.
-- Resource href parsing returns `None` for unparseable hrefs instead of raising.
-- `Query` instances no longer carry a `json` attribute by default.
-- `get_workpackages(status=...)` has documented, tested behavior for unknown statuses.
-- `get_workpackages_by_query_id` uses the same empty-handling as `get_paged_collection`.
-- All existing tests still pass on the Python 3.9 – 3.13 matrix.
+Plans:
+- [ ] 01-01-PLAN.md — BUG-01: Default Collection._items to [] for safe empty-iteration
+- [ ] 01-02-PLAN.md — BUG-02: Centralize href ID parsing into _parse_href_id helper (None/empty/URN safe)
+- [ ] 01-03-PLAN.md — BUG-03 + BUG-04 + BUG-05: Remove Query debug=True; lock unknown-status behavior; align query-id pagination empty handling
 
-**Out of scope for this phase:** Any new constructor kwargs, performance changes.
+### Phase 2: Security Baseline
+**Goal**: Make safe-by-default behavior reachable for callers via opt-in kwargs; eliminate the API-key leakage risk in DEBUG logs.
+**Depends on**: Phase 1
+**Requirements**: SEC-01, SEC-02, SEC-03, SEC-04
+**Success Criteria** (what must be TRUE):
+  1. `ApiClient(..., timeout=None, verify_ssl=True)` accepted; defaults preserve current behavior.
+  2. `timeout` and `verify_ssl` are propagated to every `requests.*` call.
+  3. API key is stored on `self._apikey`; the legacy `self.apikey` accessor remains for backwards compatibility.
+  4. No substring of the API key appears in DEBUG log output for a representative GET / POST call.
+**Plans**: TBD
 
-## Phase 2 — Security Baseline
+Plans:
+- [ ] 02-01: TBD
 
-**Goal:** Make safe-by-default behavior reachable for callers via opt-in kwargs; eliminate the API-key leakage risk in logs.
+### Phase 3: Performance Baseline
+**Goal**: Eliminate the three performance footguns — per-request TCP reconnects, undersized default `page_size`, and the O(n²) project hierarchy builder.
+**Depends on**: Phase 1
+**Requirements**: PERF-01, PERF-02, PERF-03
+**Success Criteria** (what must be TRUE):
+  1. A single `requests.Session` is reused for the lifetime of each `ApiClient` instance.
+  2. `get_paged_collection` default `page_size` raised to a sensible value (target: 100); existing callers that pass an explicit `page_size` are unaffected.
+  3. `get_projects_dict` runs in O(n) on a 1000-node synthetic input with the same output shape as before.
+**Plans**: TBD
 
-**Requirements covered:** SEC-01, SEC-02, SEC-03, SEC-04
+Plans:
+- [ ] 03-01: TBD
 
-**Success criteria:**
-- `ApiClient(..., timeout=None, verify_ssl=True)` accepted; defaults preserve current behavior.
-- `timeout` and `verify_ssl` propagated to all `requests.*` calls.
-- `self._apikey` is the canonical storage; `self.apikey` remains as a property for backwards compatibility but doesn't surface the value in `repr()` casually.
-- `caplog`-based test confirms no substring of the API key appears in DEBUG log output for a representative GET / POST call.
+### Phase 4: Test Gap Closure
+**Goal**: Close the test coverage gaps catalogued in `.planning/codebase/CONCERNS.md` and lock in the behavior introduced by Phases 1–3.
+**Depends on**: Phase 1, Phase 2, Phase 3
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04, TEST-05, TEST-06, TEST-07, TEST-08
+**Success Criteria** (what must be TRUE):
+  1. New tests cover: `Collection` without `_embedded`, URN/empty/None hrefs, unknown `_type`, `pageSize: null`, unknown `status=`, no API-key substring in DEBUG logs, `Session` reuse, and `timeout`/`verify_ssl` propagation.
+  2. All new tests pass on the Python 3.9 – 3.13 CI matrix.
+  3. CI is green on `main` after merge.
+**Plans**: TBD
 
-**Out of scope for this phase:** Retry / backoff, session reuse (lands in Phase 3).
-
-## Phase 3 — Performance Baseline
-
-**Goal:** Eliminate the three performance footguns: per-request TCP reconnects, undersized default `page_size`, and the O(n²) project hierarchy builder.
-
-**Requirements covered:** PERF-01, PERF-02, PERF-03
-
-**Success criteria:**
-- A single `requests.Session` is reused for the lifetime of each `ApiClient` instance.
-- `get_paged_collection` default `page_size` raised to `100` (or comparable sensible value); explicit callers unaffected.
-- `get_projects_dict` runs in O(n) — single pass + index dict. Same output shape; output verified against the existing tests + a new test on a 1000-node synthetic input.
-
-**Out of scope for this phase:** Streaming downloads, connection pooling beyond the defaults `requests.Session` provides.
-
-## Phase 4 — Test Gap Closure
-
-**Goal:** Close the test coverage gaps catalogued in `.planning/codebase/CONCERNS.md` and lock in the behavior introduced by Phases 1–3.
-
-**Requirements covered:** TEST-01 through TEST-08
-
-**Success criteria:**
-- New tests for `Collection` without `_embedded`, URN/empty hrefs, unknown `_type`, `pageSize: null`, unknown `status=`, no-key-in-logs, `Session` reuse, and `timeout` / `verify` propagation.
-- All new tests pass on Python 3.9 – 3.13.
-- CI green on `main` after merge.
-
-**Out of scope for this phase:** Coverage tooling rollout (deferred), property-based testing.
-
-## Coverage
-
-All 20 v0.3 requirements are mapped to one of the four phases (see `.planning/REQUIREMENTS.md` → Traceability table).
-
-## After This Milestone
-
-After v0.3 ships:
-- Tag and publish `0.3.0` to PyPI.
-- Reassess the v0.4+ backlog in `REQUIREMENTS.md` (async, snake_case attributes, retries, formatter rollout).
-- Update `.planning/codebase/CONCERNS.md` to remove resolved items.
-
----
-*Roadmap created: 2026-05-12*
+Plans:
+- [ ] 04-01: TBD
