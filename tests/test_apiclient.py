@@ -5,6 +5,7 @@ import json
 from unittest.mock import MagicMock, patch
 
 import pytest
+import requests
 import responses
 
 from openproject_api_client.apiclient import ApiClient, ApiError, RequestError
@@ -114,50 +115,81 @@ class TestSecurityKwargsPropagation:
 
     def test_http_get_default_propagates_none_and_true(self):
         client = ApiClient(BASE_URL, API_KEY)
-        with patch("openproject_api_client.apiclient.requests.get", return_value=self._mock_response()) as mocked:
+        with patch("requests.Session.get", return_value=self._mock_response()) as mocked:
             client.http_get("foo")
             _, kwargs = mocked.call_args
             assert kwargs["timeout"] is None
-            assert kwargs["verify"] is True
+        assert client._session.verify is True
 
     def test_http_get_custom_propagates(self):
         client = ApiClient(BASE_URL, API_KEY, timeout=15, verify_ssl=False)
-        with patch("openproject_api_client.apiclient.requests.get", return_value=self._mock_response()) as mocked:
+        with patch("requests.Session.get", return_value=self._mock_response()) as mocked:
             client.http_get("foo")
             _, kwargs = mocked.call_args
             assert kwargs["timeout"] == 15
-            assert kwargs["verify"] is False
+        assert client._session.verify is False
 
     def test_http_post_propagates(self):
         client = ApiClient(BASE_URL, API_KEY, timeout=10, verify_ssl=False)
-        with patch("openproject_api_client.apiclient.requests.post", return_value=self._mock_response()) as mocked:
+        with patch("requests.Session.post", return_value=self._mock_response()) as mocked:
             client.http_post("foo", {"k": "v"})
             _, kwargs = mocked.call_args
             assert kwargs["timeout"] == 10
-            assert kwargs["verify"] is False
+        assert client._session.verify is False
 
     def test_http_patch_propagates(self):
         client = ApiClient(BASE_URL, API_KEY, timeout=5, verify_ssl=False)
-        with patch("openproject_api_client.apiclient.requests.patch", return_value=self._mock_response()) as mocked:
+        with patch("requests.Session.patch", return_value=self._mock_response()) as mocked:
             client.http_patch("foo", {"k": "v"})
             _, kwargs = mocked.call_args
             assert kwargs["timeout"] == 5
-            assert kwargs["verify"] is False
+        assert client._session.verify is False
 
     def test_http_delete_propagates(self):
         client = ApiClient(BASE_URL, API_KEY, timeout=7, verify_ssl=False)
-        with patch("openproject_api_client.apiclient.requests.delete", return_value=self._mock_response()) as mocked:
+        with patch("requests.Session.delete", return_value=self._mock_response()) as mocked:
             client.http_delete("foo")
             _, kwargs = mocked.call_args
             assert kwargs["timeout"] == 7
-            assert kwargs["verify"] is False
+        assert client._session.verify is False
 
     def test_ca_bundle_path_propagates(self):
         client = ApiClient(BASE_URL, API_KEY, verify_ssl="/etc/ssl/ca.pem")
-        with patch("openproject_api_client.apiclient.requests.get", return_value=self._mock_response()) as mocked:
+        with patch("requests.Session.get", return_value=self._mock_response()) as mocked:
             client.http_get("foo")
-            _, kwargs = mocked.call_args
-            assert kwargs["verify"] == "/etc/ssl/ca.pem"
+            mocked.assert_called_once()
+        assert client._session.verify == "/etc/ssl/ca.pem"
+
+
+# -- Session reuse (PERF-01) -----------------------------------------------
+
+class TestSessionReuse:
+    @responses.activate
+    def test_session_is_reused_across_calls(self):
+        """Two sequential HTTP calls on the same client must use the same Session instance."""
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/projects",
+            json={"_type": "Collection", "total": 0, "count": 0,
+                  "offset": 1, "pageSize": 5,
+                  "_embedded": {"elements": []}},
+            status=200,
+        )
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/users",
+            json={"_type": "Collection", "total": 0, "count": 0,
+                  "offset": 1, "pageSize": 5,
+                  "_embedded": {"elements": []}},
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        assert isinstance(client._session, requests.Session)
+        session_id_before = id(client._session)
+        client.http_get("projects")
+        client.http_get("users")
+        assert id(client._session) == session_id_before
+        assert len(responses.calls) == 2
 
 
 # -- decode / decode_response ----------------------------------------------
