@@ -19,6 +19,30 @@ __all__ = [
 ]
 
 
+def _parse_href_id(href) -> int | None:
+    """Return the trailing integer ID from an OpenProject _links href, or None.
+
+    Returns None for: None, empty string, non-string inputs, URN-style hrefs
+    (any href whose value starts with "urn:", e.g.
+    'urn:openproject-org:api:v3:undisclosed'), and any href whose final path
+    segment (after stripping a trailing slash via rstrip("/")) is not a
+    base-10 integer.
+
+    The rstrip("/") normalisation means that both "/api/v3/projects/1" and
+    "/api/v3/projects/1/" reliably return 1.
+    """
+    if not isinstance(href, str):
+        return None
+    if not href:
+        return None
+    if href.startswith("urn:"):
+        return None
+    try:
+        return int(href.rstrip("/").split("/")[-1])
+    except (ValueError, TypeError):
+        return None
+
+
 class GenericType:
     """Base class for all OpenProject API resource types."""
 

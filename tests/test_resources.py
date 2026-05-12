@@ -1,5 +1,6 @@
 """Tests for openproject_api_client.resources."""
 
+import copy
 import datetime
 
 import pytest
@@ -26,8 +27,36 @@ from openproject_api_client.resources import (
     Version,
     WorkPackage,
     WorkPackageCollection,
+    _parse_href_id,
 )
 from tests.conftest import make_collection, make_wp_collection
+
+
+# -- _parse_href_id --------------------------------------------------------
+
+class TestParseHrefId:
+    def test_parse_href_id_happy_paths(self):
+        """Numeric path-style hrefs return the trailing integer."""
+        assert _parse_href_id("/api/v3/projects/1") == 1
+        assert _parse_href_id("/api/v3/work_packages/42") == 42
+        # trailing-slash href: rstrip("/") must normalise it to return 123
+        assert _parse_href_id("/api/v3/projects/123/") == 123
+
+    def test_parse_href_id_returns_none_for_invalid(self):
+        """All non-integer / non-path inputs return None."""
+        # falsy inputs
+        assert _parse_href_id(None) is None
+        assert _parse_href_id("") is None
+        # URN-style (undisclosed)
+        assert _parse_href_id("urn:openproject-org:api:v3:undisclosed") is None
+        # URN-style with numeric-looking trailing segment — still a URN
+        assert _parse_href_id("urn:openproject:work_packages:42") is None
+        # non-integer trailing segment
+        assert _parse_href_id("/api/v3/projects/abc") is None
+        # slug with no numeric end
+        assert _parse_href_id("just-a-slug") is None
+        # non-string input (e.g. int accidentally passed)
+        assert _parse_href_id(42) is None
 
 
 # -- GenericType -----------------------------------------------------------
