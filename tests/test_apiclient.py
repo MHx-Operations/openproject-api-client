@@ -832,6 +832,149 @@ class TestProjectHierarchy:
         assert isinstance(projects[0], Project)
 
 
+# -- PERF-03: get_projects_dict O(n) rewrite tests -------------------------
+
+class TestGetProjectsDictStructure:
+    """PERF-03: structural-equivalence test for the O(n) rewrite of get_projects_dict.
+
+    Hierarchy used:
+        1 "Root A"        (parent_id=None)
+          2 "A.1"         (parent_id=1)
+            4 "A.1.a"     (parent_id=2)
+          3 "A.2"         (parent_id=1)
+        5 "Root B"        (parent_id=None)
+          6 "B.1"         (parent_id=5)
+    """
+
+    def _make_project(self, id_, name, parent_href):
+        """Build a minimal Project JSON dict."""
+        return {
+            "_type": "Project",
+            "id": id_,
+            "identifier": name.lower().replace(" ", "-"),
+            "name": name,
+            "active": True,
+            "favorited": False,
+            "public": False,
+            "description": {"format": "markdown", "raw": "", "html": ""},
+            "createdAt": "2024-01-01T00:00:00+00:00",
+            "updatedAt": "2024-01-01T00:00:00+00:00",
+            "status": "on_track",
+            "statusExplanation": {"format": "markdown", "raw": "", "html": ""},
+            "_links": {
+                "parent": {"href": parent_href},
+                "self": {"href": f"/api/v3/projects/{id_}"},
+            },
+            "_embedded": {},
+        }
+
+    def test_get_projects_dict_builds_hierarchy_correctly(self, monkeypatch):
+        """O(n) rewrite must produce structurally identical output to the old O(n²) for the 6-node fixture."""
+        from openproject_api_client.resources import Project
+
+        projects = [
+            Project(self._make_project(1, "Root A", None)),
+            Project(self._make_project(2, "A.1", "/api/v3/projects/1")),
+            Project(self._make_project(4, "A.1.a", "/api/v3/projects/2")),
+            Project(self._make_project(3, "A.2", "/api/v3/projects/1")),
+            Project(self._make_project(5, "Root B", None)),
+            Project(self._make_project(6, "B.1", "/api/v3/projects/5")),
+        ]
+
+        client = ApiClient(BASE_URL, API_KEY)
+        monkeypatch.setattr(client, "get_paged_collection", lambda *args, **kwargs: projects)
+
+        pmap = client.get_projects_dict()
+
+        # Root A
+        assert pmap[1].path == [], f"Root A path: {pmap[1].path}"
+        assert pmap[1].path_ids == [], f"Root A path_ids: {pmap[1].path_ids}"
+        assert pmap[1].level == 1, f"Root A level: {pmap[1].level}"
+        assert pmap[1].fullname == "Root A", f"Root A fullname: {pmap[1].fullname}"
+
+        # A.1
+        assert pmap[2].path == ["Root A"], f"A.1 path: {pmap[2].path}"
+        assert pmap[2].path_ids == [1], f"A.1 path_ids: {pmap[2].path_ids}"
+        assert pmap[2].level == 2, f"A.1 level: {pmap[2].level}"
+        assert pmap[2].fullname == "Root A/A.1", f"A.1 fullname: {pmap[2].fullname}"
+
+        # A.1.a
+        assert pmap[4].path == ["Root A", "A.1"], f"A.1.a path: {pmap[4].path}"
+        assert pmap[4].path_ids == [1, 2], f"A.1.a path_ids: {pmap[4].path_ids}"
+        assert pmap[4].level == 3, f"A.1.a level: {pmap[4].level}"
+        assert pmap[4].fullname == "Root A/A.1/A.1.a", f"A.1.a fullname: {pmap[4].fullname}"
+
+        # A.2
+        assert pmap[3].path == ["Root A"], f"A.2 path: {pmap[3].path}"
+        assert pmap[3].path_ids == [1], f"A.2 path_ids: {pmap[3].path_ids}"
+        assert pmap[3].level == 2, f"A.2 level: {pmap[3].level}"
+        assert pmap[3].fullname == "Root A/A.2", f"A.2 fullname: {pmap[3].fullname}"
+
+        # Root B
+        assert pmap[5].path == [], f"Root B path: {pmap[5].path}"
+        assert pmap[5].path_ids == [], f"Root B path_ids: {pmap[5].path_ids}"
+        assert pmap[5].level == 1, f"Root B level: {pmap[5].level}"
+        assert pmap[5].fullname == "Root B", f"Root B fullname: {pmap[5].fullname}"
+
+        # B.1
+        assert pmap[6].path == ["Root B"], f"B.1 path: {pmap[6].path}"
+        assert pmap[6].path_ids == [5], f"B.1 path_ids: {pmap[6].path_ids}"
+        assert pmap[6].level == 2, f"B.1 level: {pmap[6].level}"
+        assert pmap[6].fullname == "Root B/B.1", f"B.1 fullname: {pmap[6].fullname}"
+
+
+class TestGetProjectsDictPerformance:
+    """PERF-03: 1000-node chain must complete well under the 1-second CI ceiling."""
+
+    def test_get_projects_dict_scales_linearly_on_1000_node_chain(self, monkeypatch):
+        """A 1000-node chain (worst case for the old O(n²) loop) must finish in < 1s.
+
+        Also validates correctness: deepest node (id=1000) must have level=1000,
+        len(path_ids)==999, and path_ids[0]==1.
+        """
+        import time
+        from openproject_api_client.resources import Project
+
+        def _make_chain_project(id_, parent_id):
+            parent_href = f"/api/v3/projects/{parent_id}" if parent_id else None
+            return {
+                "_type": "Project",
+                "id": id_,
+                "identifier": f"project-{id_}",
+                "name": f"Project {id_}",
+                "active": True,
+                "favorited": False,
+                "public": False,
+                "description": {"format": "markdown", "raw": "", "html": ""},
+                "createdAt": "2024-01-01T00:00:00+00:00",
+                "updatedAt": "2024-01-01T00:00:00+00:00",
+                "status": "on_track",
+                "statusExplanation": {"format": "markdown", "raw": "", "html": ""},
+                "_links": {
+                    "parent": {"href": parent_href},
+                    "self": {"href": f"/api/v3/projects/{id_}"},
+                },
+                "_embedded": {},
+            }
+
+        # Build a 1000-node chain: 1 → 2 → 3 → … → 1000
+        projects = [Project(_make_chain_project(i, i - 1 if i > 1 else None)) for i in range(1, 1001)]
+
+        client = ApiClient(BASE_URL, API_KEY)
+        monkeypatch.setattr(client, "get_paged_collection", lambda *args, **kwargs: projects)
+
+        t_start = time.perf_counter()
+        pmap = client.get_projects_dict()
+        elapsed = time.perf_counter() - t_start
+
+        assert elapsed < 1.0, f"get_projects_dict took {elapsed:.3f}s — exceeds 1s CI ceiling"
+
+        deepest = pmap[1000]
+        assert deepest.level == 1000, f"Expected level=1000, got {deepest.level}"
+        assert len(deepest.path_ids) == 999, f"Expected 999 path_ids, got {len(deepest.path_ids)}"
+        assert deepest.path_ids[0] == 1, f"Expected path_ids[0]==1, got {deepest.path_ids[0]}"
+
+
 # -- http_post / http_patch ------------------------------------------------
 
 class TestHttpPost:
