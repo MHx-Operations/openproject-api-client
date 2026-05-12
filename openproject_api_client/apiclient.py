@@ -52,6 +52,10 @@ class ApiClient:
         if not self.base_url.endswith('/'):
             self.base_url += '/'
 
+        self._session = requests.Session()
+        self._session.auth = HTTPBasicAuth('apikey', self._apikey)
+        self._session.verify = self._verify_ssl
+
     @property
     def apikey(self):
         """Read-only backwards-compatible accessor for the API key."""
@@ -79,13 +83,11 @@ class ApiClient:
         payload = payload or {}
         endpoint = self._endpoint(resource)
         logger.debug("GET %s params=%s", endpoint, payload or "(none)")
-        resp = requests.get(
+        resp = self._session.get(
             endpoint,
             params=payload,
             headers=self._headers(),
-            auth=self.auth,
             timeout=self._timeout,
-            verify=self._verify_ssl,
         )
         logger.debug("GET %s -> %s", endpoint, resp.status_code)
         return resp
@@ -94,13 +96,11 @@ class ApiClient:
         """Perform an HTTP POST request with a JSON body."""
         endpoint = self._endpoint(resource)
         logger.debug("POST %s", endpoint)
-        resp = requests.post(
+        resp = self._session.post(
             endpoint,
             json=body,
             headers=self._headers('application/json'),
-            auth=self.auth,
             timeout=self._timeout,
-            verify=self._verify_ssl,
         )
         logger.debug("POST %s -> %s", endpoint, resp.status_code)
         return resp
@@ -109,13 +109,11 @@ class ApiClient:
         """Perform an HTTP PATCH request with a JSON body."""
         endpoint = self._endpoint(resource)
         logger.debug("PATCH %s", endpoint)
-        resp = requests.patch(
+        resp = self._session.patch(
             endpoint,
             json=body,
             headers=self._headers('application/json'),
-            auth=self.auth,
             timeout=self._timeout,
-            verify=self._verify_ssl,
         )
         logger.debug("PATCH %s -> %s", endpoint, resp.status_code)
         return resp
@@ -124,12 +122,10 @@ class ApiClient:
         """Perform an HTTP DELETE request."""
         endpoint = self._endpoint(resource)
         logger.debug("DELETE %s", endpoint)
-        resp = requests.delete(
+        resp = self._session.delete(
             endpoint,
             headers=self._headers(),
-            auth=self.auth,
             timeout=self._timeout,
-            verify=self._verify_ssl,
         )
         logger.debug("DELETE %s -> %s", endpoint, resp.status_code)
         return resp
