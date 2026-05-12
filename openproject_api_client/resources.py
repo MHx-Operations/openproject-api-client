@@ -818,7 +818,7 @@ class Collection(GenericType):
     """A paginated collection of API resources."""
 
     def __init__(self, json_object=None):
-        self._items = None
+        self._items = []
         self.count = None
         self.offset = None
         self.pagesize = None
