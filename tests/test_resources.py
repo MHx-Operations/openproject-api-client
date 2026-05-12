@@ -563,6 +563,26 @@ class TestCollection:
         c = Collection(coll_json)
         assert "total=1" in str(c)
 
+    def test_collection_missing_embedded(self):
+        d = {"_type": "Collection", "total": 0, "count": 0, "offset": 1, "pageSize": 5}
+        c = Collection(d)
+        assert list(c) == []
+        assert len(list(c)) == 0
+
+    def test_collection_embedded_without_elements(self):
+        d = {"_type": "Collection", "total": 0, "count": 0, "_embedded": {}}
+        c = Collection(d)
+        assert list(c) == []
+
+    def test_collection_empty_elements_regression(self):
+        d = {"_type": "Collection", "total": 0, "count": 0, "_embedded": {"elements": []}}
+        c = Collection(d)
+        assert list(c) == []
+
+    def test_collection_items_default_is_list(self):
+        c = Collection({"_type": "Collection"})
+        assert isinstance(c._items, list)
+
 
 class TestWorkPackageCollection:
     def test_is_collection(self, workpackage_json):
