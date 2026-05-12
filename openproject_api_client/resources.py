@@ -605,7 +605,7 @@ class Query(GenericType):
 
         self.results = None
 
-        super().__init__(json_object, debug=True, datetime_fields=['createdat', 'updatedat'])
+        super().__init__(json_object, datetime_fields=['createdat', 'updatedat'])
 
         if 'project' in json_object['_links']:
             if json_object['_links']['project']['href']:

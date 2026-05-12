@@ -570,6 +570,41 @@ class TestQuery:
     def test_str(self, query_json):
         assert "Open Bugs" in str(Query(query_json))
 
+    def test_query_has_no_json_attr_by_default(self, query_json):
+        """BUG-03: Query must not carry a raw .json attribute (debug=True side effect)."""
+        q = Query(query_json)
+        assert not hasattr(q, "json"), "Query.json should not be set; remove debug=True from super().__init__"
+
+    def test_query_no_links_keys_on_namespace(self, query_json):
+        """BUG-03: _links must not appear on the namespace (raw or lowercased)."""
+        q = Query(query_json)
+        assert not hasattr(q, "_links"), "_links must not bleed onto Query namespace"
+        assert not hasattr(q, "links"), "lowercased 'links' must not appear on Query namespace"
+
+    def test_query_no_embedded_keys_on_namespace(self, query_json):
+        """BUG-03: _embedded must not appear on the namespace (raw or lowercased)."""
+        q = Query(query_json)
+        assert not hasattr(q, "_embedded"), "_embedded must not bleed onto Query namespace"
+        assert not hasattr(q, "embedded"), "lowercased 'embedded' must not appear on Query namespace"
+
+    def test_query_public_attrs_preserved(self, query_json):
+        """BUG-03 regression: removing debug=True must not drop public attributes."""
+        q = Query(query_json)
+        assert q.id == 99
+        assert q.name == "Open Bugs"
+        assert q.project_id == 1
+        assert q.user_id == 3
+        assert q.public is True
+        assert q.starred is False
+
+    def test_query_results_decoding_preserved(self, query_json, workpackage_json):
+        """BUG-03 regression: _embedded.results decoding must still work after debug=True removal."""
+        from tests.conftest import make_wp_collection
+        query_json["_embedded"]["results"] = make_wp_collection([workpackage_json], total=1)
+        q = Query(query_json)
+        from openproject_api_client.resources import WorkPackageCollection
+        assert isinstance(q.results, WorkPackageCollection)
+
 
 # -- Collection / WorkPackageCollection ------------------------------------
 

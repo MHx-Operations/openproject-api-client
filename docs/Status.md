@@ -1,5 +1,36 @@
 # Project Status
 
+## v0.3 Release Notes
+
+### Breaking / Behavior Changes
+
+**Query.json removed (intentional cleanup)**
+
+`Query` instances no longer carry a `Query.json` attribute holding the raw API
+JSON payload. The raw `_links` and `_embedded` keys are also no longer set as
+lowercased attributes (e.g. `query.links`, `query.embedded`) on `Query` instances.
+This was an unintentional debug leak introduced in v0.2 (`debug=True` was passed to
+`GenericType.__init__` during development and never removed).
+
+Callers that relied on `Query.json` to access the raw API response must instead call
+`ApiClient.get("queries/{id}")` directly and inspect the returned object, or use
+`ApiClient.http_get()` to get the raw `requests.Response`.
+
+**`get_workpackages(status=...)` — unknown status values are silently ignored**
+
+Passing an unrecognised status string (anything other than `'all'`, `'open'`, or
+`'closed'`) now emits a DEBUG-level log entry and applies no filter, returning all
+work packages. A matching `else` clause was added to `get_workpackages_by_project_id`
+for consistency. See `get_workpackages` docstring for details.
+
+**`get_workpackages_by_query_id` — None pagesize/offset handled gracefully**
+
+The pagination termination condition now falls back to local `page_size` / `offset`
+values when the API omits `pageSize` or `offset` from the `WorkPackageCollection`
+envelope, mirroring the existing `get_paged_collection` behavior.
+
+---
+
 ## Current State (v0.2.0)
 
 Read-only Python client for the OpenProject API v3. Supports pagination, typed
