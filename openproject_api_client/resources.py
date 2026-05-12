@@ -134,13 +134,7 @@ class Project(GenericType):
 
         if '_links' in json_object:
             if 'parent' in json_object['_links']:
-                if json_object['_links']['parent']['href']:
-                    if json_object['_links']['parent']['href'] != "urn:openproject-org:api:v3:undisclosed":
-                        try:
-                            self.parent_id = int(json_object['_links']['parent']['href'].split("/")[-1])
-                        except (ValueError, TypeError):
-                            # ok if unparseable
-                            pass
+                self.parent_id = _parse_href_id(json_object['_links']['parent']['href'])
 
     def __str__(self):
         return f"Project({self.id}): {self.name}"
@@ -212,60 +206,66 @@ class WorkPackage(GenericType):
         if '_links' in json_object:
             if 'parent' in json_object['_links']:
                 if json_object['_links']['parent']['href']:
-                    self.parent_id = int(json_object['_links']['parent']['href'].split("/")[-1])
+                    self.parent_id = _parse_href_id(json_object['_links']['parent']['href'])
 
             if 'budget' in json_object['_links']:
                 if json_object['_links']['budget']['href']:
                     self.budget = json_object['_links']['budget'].get('title')
-                    self.budget_id = int(json_object['_links']['budget']['href'].split("/")[-1])
+                    self.budget_id = _parse_href_id(json_object['_links']['budget']['href'])
 
             if 'category' in json_object['_links']:
                 if json_object['_links']['category']['href']:
                     self.category = json_object['_links']['category'].get('title')
-                    self.category_id = int(json_object['_links']['category']['href'].split("/")[-1])
+                    self.category_id = _parse_href_id(json_object['_links']['category']['href'])
 
             if 'type' in json_object['_links']:
                 if json_object['_links']['type']['href']:
                     self.type = json_object['_links']['type']['title']
-                    self.type_id = int(json_object['_links']['type']['href'].split("/")[-1])
+                    self.type_id = _parse_href_id(json_object['_links']['type']['href'])
 
             if 'priority' in json_object['_links']:
                 if json_object['_links']['priority']['href']:
                     self.priority = json_object['_links']['priority']['title']
-                    self.priority_id = int(json_object['_links']['priority']['href'].split("/")[-1])
+                    self.priority_id = _parse_href_id(json_object['_links']['priority']['href'])
 
             if 'status' in json_object['_links']:
                 if json_object['_links']['status']['href']:
                     self.status = json_object['_links']['status']['title']
-                    self.status_id = int(json_object['_links']['status']['href'].split("/")[-1])
+                    self.status_id = _parse_href_id(json_object['_links']['status']['href'])
 
             if 'project' in json_object['_links']:
                 if json_object['_links']['project']['href']:
                     self.project = json_object['_links']['project']['title']
-                    self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+                    self.project_id = _parse_href_id(json_object['_links']['project']['href'])
 
             if 'author' in json_object['_links']:
                 if json_object['_links']['author']['href']:
                     self.author = json_object['_links']['author']['title']
-                    self.author_id = int(json_object['_links']['author']['href'].split("/")[-1])
-                    self.author_type = json_object['_links']['author']['href'].split("/")[-2]
+                    self.author_id = _parse_href_id(json_object['_links']['author']['href'])
+                    href = json_object['_links']['author']['href']
+                    if isinstance(href, str) and "/" in href and not href.startswith("urn:"):
+                        self.author_type = href.split("/")[-2]
 
             if 'assignee' in json_object['_links']:
                 if json_object['_links']['assignee']['href']:
                     self.assignee = json_object['_links']['assignee']['title']
-                    self.assignee_id = int(json_object['_links']['assignee']['href'].split("/")[-1])
-                    self.assignee_type = json_object['_links']['assignee']['href'].split("/")[-2]
+                    self.assignee_id = _parse_href_id(json_object['_links']['assignee']['href'])
+                    href = json_object['_links']['assignee']['href']
+                    if isinstance(href, str) and "/" in href and not href.startswith("urn:"):
+                        self.assignee_type = href.split("/")[-2]
 
             if 'responsible' in json_object['_links']:
                 if json_object['_links']['responsible']['href']:
                     self.responsible = json_object['_links']['responsible']['title']
-                    self.responsible_id = int(json_object['_links']['responsible']['href'].split("/")[-1])
-                    self.responsible_type = json_object['_links']['responsible']['href'].split("/")[-2]
+                    self.responsible_id = _parse_href_id(json_object['_links']['responsible']['href'])
+                    href = json_object['_links']['responsible']['href']
+                    if isinstance(href, str) and "/" in href and not href.startswith("urn:"):
+                        self.responsible_type = href.split("/")[-2]
 
             if 'version' in json_object['_links']:
                 if json_object['_links']['version']['href']:
                     self.version = json_object['_links']['version']['title']
-                    self.version_id = int(json_object['_links']['version']['href'].split("/")[-1])
+                    self.version_id = _parse_href_id(json_object['_links']['version']['href'])
 
         if '_embedded' in json_object:
             if 'type' in json_object['_embedded']:
@@ -381,12 +381,12 @@ class Relation(GenericType):
         if '_links' in json_object:
             if 'from' in json_object['_links']:
                 if json_object['_links']['from']['href']:
-                    self.from_id = int(json_object['_links']['from']['href'].split("/")[-1])
+                    self.from_id = _parse_href_id(json_object['_links']['from']['href'])
                     self.from_title = json_object['_links']['from']['title']
 
             if 'to' in json_object['_links']:
                 if json_object['_links']['to']['href']:
-                    self.to_id = int(json_object['_links']['to']['href'].split("/")[-1])
+                    self.to_id = _parse_href_id(json_object['_links']['to']['href'])
                     self.to_title = json_object['_links']['to']['title']
 
     def __str__(self):
@@ -475,13 +475,15 @@ class Membership(GenericType):
         if 'project' in json_object['_links']:
             if json_object['_links']['project']['href']:
                 self.project = json_object['_links']['project']['title']
-                self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+                self.project_id = _parse_href_id(json_object['_links']['project']['href'])
 
         if 'principal' in json_object['_links']:
             if json_object['_links']['principal']['href']:
                 self.principal = json_object['_links']['principal']['title']
-                self.principal_id = int(json_object['_links']['principal']['href'].split("/")[-1])
-                self.principal_type = json_object['_links']['principal']['href'].split("/")[-2]
+                self.principal_id = _parse_href_id(json_object['_links']['principal']['href'])
+                href = json_object['_links']['principal']['href']
+                if isinstance(href, str) and "/" in href and not href.startswith("urn:"):
+                    self.principal_type = href.split("/")[-2]
 
         if '_embedded' in json_object:
             if 'roles' in json_object['_embedded']:
@@ -608,12 +610,12 @@ class Query(GenericType):
         if 'project' in json_object['_links']:
             if json_object['_links']['project']['href']:
                 self.project = json_object['_links']['project']['title']
-                self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+                self.project_id = _parse_href_id(json_object['_links']['project']['href'])
 
         if 'user' in json_object['_links']:
             if json_object['_links']['user']['href']:
                 self.user = json_object['_links']['user']['title']
-                self.user_id = int(json_object['_links']['user']['href'].split("/")[-1])
+                self.user_id = _parse_href_id(json_object['_links']['user']['href'])
 
         if '_embedded' in json_object:
             if 'results' in json_object['_embedded']:
@@ -679,11 +681,11 @@ class Category(GenericType):
             if 'project' in json_object['_links']:
                 if json_object['_links']['project']['href']:
                     self.project = json_object['_links']['project'].get('title')
-                    self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+                    self.project_id = _parse_href_id(json_object['_links']['project']['href'])
             if 'defaultAssignee' in json_object['_links']:
                 if json_object['_links']['defaultAssignee']['href']:
                     self.defaultassignee = json_object['_links']['defaultAssignee'].get('title')
-                    self.defaultassignee_id = int(json_object['_links']['defaultAssignee']['href'].split("/")[-1])
+                    self.defaultassignee_id = _parse_href_id(json_object['_links']['defaultAssignee']['href'])
 
     def __str__(self):
         return f"Category({self.id}): {self.name}"
@@ -718,19 +720,19 @@ class TimeEntry(GenericType):
             if 'project' in json_object['_links']:
                 if json_object['_links']['project']['href']:
                     self.project = json_object['_links']['project'].get('title')
-                    self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+                    self.project_id = _parse_href_id(json_object['_links']['project']['href'])
             if 'workPackage' in json_object['_links']:
                 if json_object['_links']['workPackage']['href']:
                     self.workpackage = json_object['_links']['workPackage'].get('title')
-                    self.workpackage_id = int(json_object['_links']['workPackage']['href'].split("/")[-1])
+                    self.workpackage_id = _parse_href_id(json_object['_links']['workPackage']['href'])
             if 'user' in json_object['_links']:
                 if json_object['_links']['user']['href']:
                     self.user = json_object['_links']['user'].get('title')
-                    self.user_id = int(json_object['_links']['user']['href'].split("/")[-1])
+                    self.user_id = _parse_href_id(json_object['_links']['user']['href'])
             if 'activity' in json_object['_links']:
                 if json_object['_links']['activity']['href']:
                     self.activity = json_object['_links']['activity'].get('title')
-                    self.activity_id = int(json_object['_links']['activity']['href'].split("/")[-1])
+                    self.activity_id = _parse_href_id(json_object['_links']['activity']['href'])
 
     def __str__(self):
         return f"TimeEntry({self.id}): {self.hours} on WP#{self.workpackage_id}"
@@ -755,7 +757,7 @@ class Activity(GenericType):
             if 'user' in json_object['_links']:
                 if json_object['_links']['user']['href']:
                     self.user = json_object['_links']['user'].get('title')
-                    self.user_id = int(json_object['_links']['user']['href'].split("/")[-1])
+                    self.user_id = _parse_href_id(json_object['_links']['user']['href'])
 
     def __str__(self):
         return f"Activity({self.id}): by {self.user}"
@@ -785,12 +787,12 @@ class Attachment(GenericType):
             if 'author' in json_object['_links']:
                 if json_object['_links']['author']['href']:
                     self.author = json_object['_links']['author'].get('title')
-                    self.author_id = int(json_object['_links']['author']['href'].split("/")[-1])
+                    self.author_id = _parse_href_id(json_object['_links']['author']['href'])
             if 'container' in json_object['_links']:
-                if json_object['_links']['container']['href']:
-                    parts = json_object['_links']['container']['href'].split("/")
-                    self.container_id = int(parts[-1])
-                    self.container_type = parts[-2]
+                href = json_object['_links']['container']['href']
+                self.container_id = _parse_href_id(href)
+                if isinstance(href, str) and "/" in href and not href.startswith("urn:"):
+                    self.container_type = href.split("/")[-2]
             if 'downloadLocation' in json_object['_links']:
                 if json_object['_links']['downloadLocation']['href']:
                     self.download_url = json_object['_links']['downloadLocation']['href']
@@ -823,16 +825,16 @@ class Notification(GenericType):
             if 'project' in json_object['_links']:
                 if json_object['_links']['project']['href']:
                     self.project = json_object['_links']['project'].get('title')
-                    self.project_id = int(json_object['_links']['project']['href'].split("/")[-1])
+                    self.project_id = _parse_href_id(json_object['_links']['project']['href'])
             if 'resource' in json_object['_links']:
-                if json_object['_links']['resource']['href']:
-                    parts = json_object['_links']['resource']['href'].split("/")
-                    self.resource_id = int(parts[-1])
-                    self.resource_type = parts[-2]
+                href = json_object['_links']['resource']['href']
+                self.resource_id = _parse_href_id(href)
+                if isinstance(href, str) and "/" in href and not href.startswith("urn:"):
+                    self.resource_type = href.split("/")[-2]
             if 'actor' in json_object['_links']:
                 if json_object['_links']['actor']['href']:
                     self.actor = json_object['_links']['actor'].get('title')
-                    self.actor_id = int(json_object['_links']['actor']['href'].split("/")[-1])
+                    self.actor_id = _parse_href_id(json_object['_links']['actor']['href'])
 
     def __str__(self):
         return f"Notification({self.id}): {self.reason} - {self.subject}"

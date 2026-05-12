@@ -745,3 +745,83 @@ class TestNotification:
     def test_str(self, notification_json):
         s = str(Notification(notification_json))
         assert "assigned" in s
+
+
+# -- BUG-02 integration tests: URN / None / empty href handling ----------
+
+class TestHrefParsingRobustness:
+    """Integration tests for BUG-02: all resource href parses must survive
+    URN-style, None, and empty-string hrefs without raising."""
+
+    def test_workpackage_parent_undisclosed_urn(self, workpackage_json):
+        data = copy.deepcopy(workpackage_json)
+        data["_links"]["parent"]["href"] = "urn:openproject-org:api:v3:undisclosed"
+        wp = WorkPackage(data)
+        assert wp.parent_id is None
+
+    def test_workpackage_assignee_href_none(self, workpackage_json):
+        data = copy.deepcopy(workpackage_json)
+        data["_links"]["assignee"]["href"] = None
+        wp = WorkPackage(data)
+        assert wp.assignee_id is None
+        assert wp.assignee is None
+
+    def test_workpackage_author_type_with_urn(self, workpackage_json):
+        data = copy.deepcopy(workpackage_json)
+        data["_links"]["author"]["href"] = "urn:openproject-org:api:v3:undisclosed"
+        wp = WorkPackage(data)
+        assert wp.author_id is None
+        assert wp.author_type is None
+
+    def test_relation_from_href_empty(self, relation_json):
+        data = copy.deepcopy(relation_json)
+        data["_links"]["from"]["href"] = ""
+        r = Relation(data)
+        assert r.from_id is None
+
+    def test_membership_principal_href_urn(self, membership_json):
+        data = copy.deepcopy(membership_json)
+        data["_links"]["principal"]["href"] = "urn:openproject-org:api:v3:undisclosed"
+        m = Membership(data)
+        assert m.principal_id is None
+        assert m.principal_type is None
+
+    def test_query_user_href_none(self, query_json):
+        data = copy.deepcopy(query_json)
+        data["_links"]["user"]["href"] = None
+        q = Query(data)
+        assert q.user_id is None
+
+    def test_attachment_container_href_urn(self, attachment_json):
+        data = copy.deepcopy(attachment_json)
+        data["_links"]["container"]["href"] = "urn:openproject-org:api:v3:undisclosed"
+        a = Attachment(data)
+        assert a.container_id is None
+        assert a.container_type is None
+
+    def test_notification_resource_href_none(self, notification_json):
+        data = copy.deepcopy(notification_json)
+        data["_links"]["resource"]["href"] = None
+        n = Notification(data)
+        assert n.resource_id is None
+        assert n.resource_type is None
+
+    def test_project_parent_id_numeric_regression(self, child_project_json):
+        """Regression: Project.parent_id still parses correctly after rewrite."""
+        p = Project(child_project_json)
+        assert p.parent_id == 1
+
+    def test_workpackage_all_links_numeric_regression(self, workpackage_json):
+        """Regression: all WorkPackage *_id fields still parse after substitution."""
+        wp = WorkPackage(workpackage_json)
+        assert wp.parent_id == 10
+        assert wp.type_id == 1
+        assert wp.priority_id == 2
+        assert wp.status_id == 1
+        assert wp.project_id == 1
+        assert wp.author_id == 3
+        assert wp.assignee_id == 4
+        assert wp.responsible_id == 5
+        assert wp.version_id == 7
+        assert wp.budget_id == 8
+        assert wp.category_id == 3
