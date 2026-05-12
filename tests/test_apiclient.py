@@ -1272,6 +1272,51 @@ class TestApiKeyPrivacy:
         assert c.auth.password == API_KEY
 
 
+# -- PERF-02: get_paged_collection default page_size = 100 ----------------
+
+class TestGetPagedCollectionDefaultPageSize:
+    def test_get_paged_collection_default_page_size_is_100_in_signature(self):
+        """PERF-02: signature default for page_size must be 100."""
+        params = inspect.signature(ApiClient.get_paged_collection).parameters
+        assert params["page_size"].default == 100, (
+            f"Expected default page_size=100, got {params['page_size'].default}"
+        )
+
+    @responses.activate
+    def test_get_paged_collection_default_page_size_sends_100_on_the_wire(self, status_json):
+        """PERF-02: calling get_paged_collection without page_size sends pageSize=100 in the request URL."""
+        coll = make_collection("Collection", [status_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/statuses",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        items = client.get_paged_collection("statuses")
+        assert len(items) == 1
+        assert "pageSize=100" in responses.calls[0].request.url, (
+            f"Expected 'pageSize=100' in URL, got: {responses.calls[0].request.url}"
+        )
+
+    @responses.activate
+    def test_get_paged_collection_explicit_page_size_not_overridden(self, status_json):
+        """PERF-02: an explicit page_size kwarg must not be overridden by the default."""
+        coll = make_collection("Collection", [status_json], total=1, offset=1, page_size=25)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/statuses",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        items = client.get_paged_collection("statuses", page_size=25)
+        assert len(items) == 1
+        assert "pageSize=25" in responses.calls[0].request.url, (
+            f"Expected 'pageSize=25' in URL, got: {responses.calls[0].request.url}"
+        )
+
+
 # -- API key not in DEBUG logs (SEC-04) ------------------------------------
 
 class TestApiKeyNotInDebugLogs:
