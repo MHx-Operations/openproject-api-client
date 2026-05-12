@@ -43,10 +43,11 @@ Plans:
   2. `timeout` and `verify_ssl` are propagated to every `requests.*` call.
   3. API key is stored on `self._apikey`; the legacy `self.apikey` accessor remains for backwards compatibility.
   4. No substring of the API key appears in DEBUG log output for a representative GET / POST call.
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
+- [ ] 02-01-PLAN.md — SEC-01 + SEC-02: Opt-in keyword-only timeout and verify_ssl kwargs propagated to all four http_* methods
+- [ ] 02-02-PLAN.md — SEC-03 + SEC-04: Private _apikey storage with backwards-compat apikey @property, masking __repr__, and caplog regression test asserting no key substring in DEBUG output
 
 ### Phase 3: Performance Baseline
 **Goal**: Eliminate the three performance footguns — per-request TCP reconnects, undersized default `page_size`, and the O(n²) project hierarchy builder.
