@@ -75,7 +75,9 @@ class ApiClient:
             endpoint,
             params=payload,
             headers=self._headers(),
-            auth=self.auth
+            auth=self.auth,
+            timeout=self._timeout,
+            verify=self._verify_ssl,
         )
         logger.debug("GET %s -> %s", endpoint, resp.status_code)
         return resp
@@ -88,7 +90,9 @@ class ApiClient:
             endpoint,
             json=body,
             headers=self._headers('application/json'),
-            auth=self.auth
+            auth=self.auth,
+            timeout=self._timeout,
+            verify=self._verify_ssl,
         )
         logger.debug("POST %s -> %s", endpoint, resp.status_code)
         return resp
@@ -101,7 +105,9 @@ class ApiClient:
             endpoint,
             json=body,
             headers=self._headers('application/json'),
-            auth=self.auth
+            auth=self.auth,
+            timeout=self._timeout,
+            verify=self._verify_ssl,
         )
         logger.debug("PATCH %s -> %s", endpoint, resp.status_code)
         return resp
@@ -113,7 +119,9 @@ class ApiClient:
         resp = requests.delete(
             endpoint,
             headers=self._headers(),
-            auth=self.auth
+            auth=self.auth,
+            timeout=self._timeout,
+            verify=self._verify_ssl,
         )
         logger.debug("DELETE %s -> %s", endpoint, resp.status_code)
         return resp
