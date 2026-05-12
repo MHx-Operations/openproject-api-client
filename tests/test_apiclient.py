@@ -1,5 +1,6 @@
 """Tests for openproject_api_client.apiclient."""
 
+import inspect
 import json
 
 import pytest
@@ -51,6 +52,55 @@ class TestApiClientInit:
     def test_missing_apikey_raises(self):
         with pytest.raises(ApiError):
             ApiClient(BASE_URL, "")
+
+
+# -- Security kwargs (SEC-01, SEC-02) --------------------------------------
+
+class TestApiClientSecurityKwargs:
+    def test_default_timeout_is_none(self):
+        c = ApiClient(BASE_URL, API_KEY)
+        assert c._timeout is None
+
+    def test_default_verify_ssl_is_true(self):
+        c = ApiClient(BASE_URL, API_KEY)
+        assert c._verify_ssl is True
+
+    def test_positional_construction_unchanged(self):
+        """Regression: positional ApiClient(base_url, apikey) still works."""
+        c = ApiClient(BASE_URL, API_KEY)
+        assert c.apikey == API_KEY
+
+    def test_custom_timeout(self):
+        c = ApiClient(BASE_URL, API_KEY, timeout=30)
+        assert c._timeout == 30
+
+    def test_custom_verify_ssl_false(self):
+        c = ApiClient(BASE_URL, API_KEY, verify_ssl=False)
+        assert c._verify_ssl is False
+
+    def test_custom_verify_ssl_ca_bundle_path(self):
+        c = ApiClient(BASE_URL, API_KEY, verify_ssl="/path/to/ca.pem")
+        assert c._verify_ssl == "/path/to/ca.pem"
+
+    def test_timeout_is_keyword_only(self):
+        """Passing timeout positionally must raise TypeError."""
+        with pytest.raises(TypeError):
+            ApiClient(BASE_URL, API_KEY, 30)
+
+    def test_verify_ssl_is_keyword_only(self):
+        """Passing verify_ssl positionally must raise TypeError."""
+        with pytest.raises(TypeError):
+            ApiClient(BASE_URL, API_KEY, 30, False)
+
+    def test_signature_timeout_keyword_only(self):
+        params = inspect.signature(ApiClient.__init__).parameters
+        assert params["timeout"].kind.name == "KEYWORD_ONLY"
+        assert params["timeout"].default is None
+
+    def test_signature_verify_ssl_keyword_only(self):
+        params = inspect.signature(ApiClient.__init__).parameters
+        assert params["verify_ssl"].kind.name == "KEYWORD_ONLY"
+        assert params["verify_ssl"].default is True
 
 
 # -- decode / decode_response ----------------------------------------------
