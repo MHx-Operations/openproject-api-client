@@ -17,7 +17,7 @@ Requirements for the hardening milestone. All changes must be non-breaking with 
 ### Performance (PERF)
 
 - [x] **PERF-01**: `ApiClient` uses a single `requests.Session` for the lifetime of the instance. Session is constructed lazily and reused across all HTTP methods.
-- [ ] **PERF-02**: `get_paged_collection` default `page_size` is raised from `5` to a sensible value (target: `100`) without changing the function signature in a breaking way. Existing callers that pass explicit `page_size` are unaffected.
+- [x] **PERF-02**: `get_paged_collection` default `page_size` is raised from `5` to a sensible value (target: `100`) without changing the function signature in a breaking way. Existing callers that pass explicit `page_size` are unaffected.
 - [ ] **PERF-03**: `get_projects_dict` builds the parent/child hierarchy in O(n) (single pass with an index dict) instead of the current O(n²) re-scan. Same output shape.
 
 ### Latent Bugs (BUG)
