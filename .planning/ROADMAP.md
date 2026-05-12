@@ -31,7 +31,7 @@ v0.3 Hardening milestone for the openproject-api-client Python library. The jour
 
 Plans:
 - [x] 01-01-PLAN.md — BUG-01: Default Collection._items to [] for safe empty-iteration
-- [ ] 01-02-PLAN.md — BUG-02: Centralize href ID parsing into _parse_href_id helper (None/empty/URN safe)
+- [x] 01-02-PLAN.md — BUG-02: Centralize href ID parsing into _parse_href_id helper (None/empty/URN safe)
 - [ ] 01-03-PLAN.md — BUG-03 + BUG-04 + BUG-05: Remove Query debug=True; lock unknown-status behavior; align query-id pagination empty handling
 
 ### Phase 2: Security Baseline
