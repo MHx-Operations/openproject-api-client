@@ -60,7 +60,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — PERF-01: Eager requests.Session on ApiClient with session-level auth/verify; all four http_* methods routed through self._session (per-call timeout retained)
+- [x] 03-01-PLAN.md — PERF-01: Eager requests.Session on ApiClient with session-level auth/verify; all four http_* methods routed through self._session (per-call timeout retained)
 - [ ] 03-02-PLAN.md — PERF-02: Raise get_paged_collection default page_size from 5 to 100; signature + on-the-wire tests; docs/Status.md release note
 - [ ] 03-03-PLAN.md — PERF-03: Rewrite get_projects_dict using a parent->children index and iterative descent (O(n)); structural-equivalence + 1000-node performance tests
 
