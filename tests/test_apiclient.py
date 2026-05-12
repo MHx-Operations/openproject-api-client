@@ -452,6 +452,201 @@ class TestEndpointMethods:
         assert "filters" in responses.calls[0].request.url
 
 
+# -- BUG-04: get_workpackages unknown status behavior ----------------------
+
+class TestGetWorkpackagesUnknownStatus:
+    """BUG-04: unknown status string is a silent no-op with a DEBUG log entry."""
+
+    @responses.activate
+    def test_get_workpackages_unknown_status_no_filter(self, workpackage_json):
+        """Unknown status must not add a filters= query param."""
+        coll = make_collection("Collection", [workpackage_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/work_packages",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        wps = client.get_workpackages(status="banana")
+        assert len(wps) == 1
+        assert "filters" not in responses.calls[0].request.url
+
+    @responses.activate
+    def test_get_workpackages_unknown_status_logs_debug(self, workpackage_json, caplog):
+        """Unknown status must emit a DEBUG log entry containing the status value."""
+        import logging
+        coll = make_collection("Collection", [workpackage_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/work_packages",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        with caplog.at_level(logging.DEBUG, logger="openproject_api_client.apiclient"):
+            client.get_workpackages(status="banana")
+        debug_msgs = [r.message for r in caplog.records if r.levelno == logging.DEBUG]
+        assert any("banana" in m for m in debug_msgs), f"Expected 'banana' in a DEBUG log; got: {debug_msgs}"
+
+    @responses.activate
+    def test_get_workpackages_open_status_regression(self, workpackage_json):
+        """Known status 'open' must still apply the correct filter."""
+        coll = make_collection("Collection", [workpackage_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/work_packages",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        client.get_workpackages(status="open")
+        assert "filters" in responses.calls[0].request.url
+        assert "%22o%22" in responses.calls[0].request.url or '"o"' in responses.calls[0].request.url
+
+    @responses.activate
+    def test_get_workpackages_uppercase_status_regression(self, workpackage_json):
+        """Status matching must be case-insensitive (OPEN == open)."""
+        coll = make_collection("Collection", [workpackage_json], total=1, offset=1, page_size=100)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/work_packages",
+            json=coll,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        client.get_workpackages(status="OPEN")
+        assert "filters" in responses.calls[0].request.url
+        assert "%22o%22" in responses.calls[0].request.url or '"o"' in responses.calls[0].request.url
+
+
+# -- BUG-05: get_workpackages_by_query_id empty / None pagesize handling ---
+
+def _make_query_json(wp_collection_json):
+    """Build a minimal Query JSON wrapping a WorkPackageCollection in _embedded.results."""
+    return {
+        "_type": "Query",
+        "id": 99,
+        "name": "Test Query",
+        "filters": [],
+        "hidden": False,
+        "highlightingMode": "none",
+        "public": True,
+        "showHierarchies": False,
+        "starred": False,
+        "sums": False,
+        "timelineLabels": {},
+        "timelineVisible": False,
+        "timelineZoomLevel": "days",
+        "timestamps": [],
+        "createdAt": "2024-01-01T00:00:00+00:00",
+        "updatedAt": "2024-03-01T00:00:00+00:00",
+        "_links": {
+            "project": {"href": "/api/v3/projects/1", "title": "My Project"},
+            "user": {"href": "/api/v3/users/3", "title": "Alice Smith"},
+        },
+        "_embedded": {
+            "results": wp_collection_json,
+        },
+    }
+
+
+class TestGetWorkpackagesByQueryId:
+    """BUG-05: get_workpackages_by_query_id empty/None pagesize/offset handling."""
+
+    @responses.activate
+    def test_get_workpackages_by_query_id_empty_collection(self):
+        """Empty WorkPackageCollection (total=0) must return [] without AttributeError."""
+        from tests.conftest import make_wp_collection
+        wpc = make_wp_collection([], total=0, offset=1, page_size=10)
+        query = _make_query_json(wpc)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/queries/99",
+            json=query,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        result = client.get_workpackages_by_query_id(99)
+        assert result == []
+
+    @responses.activate
+    def test_get_workpackages_by_query_id_pagesize_none(self, workpackage_json):
+        """WorkPackageCollection with null pageSize/offset must not raise TypeError."""
+        from tests.conftest import make_wp_collection
+        wpc = make_wp_collection([workpackage_json], total=1, offset=1, page_size=10)
+        # Simulate API omitting pageSize and offset (None values)
+        wpc["pageSize"] = None
+        wpc["offset"] = None
+        query = _make_query_json(wpc)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/queries/99",
+            json=query,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        result = client.get_workpackages_by_query_id(99)
+        # Must not raise TypeError; result should contain the one work package
+        assert len(result) == 1
+
+    @responses.activate
+    def test_get_workpackages_by_query_id_multipage(self, workpackage_json):
+        """Two-page query (total=15, page_size=10): result list must have 15 items."""
+        from tests.conftest import make_wp_collection
+        import copy
+        wps_page1 = [copy.deepcopy(workpackage_json) for _ in range(10)]
+        wps_page2 = [copy.deepcopy(workpackage_json) for _ in range(5)]
+        # page 1: offset=1, total=15, pageSize=10 — not done yet
+        wpc1 = make_wp_collection(wps_page1, total=15, offset=1, page_size=10)
+        query1 = _make_query_json(wpc1)
+        # page 2: offset=2, total=15, pageSize=10 — done (15 < 2*10 → 15 < 20)
+        wpc2 = make_wp_collection(wps_page2, total=15, offset=2, page_size=10)
+        query2 = _make_query_json(wpc2)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/queries/99", json=query1, status=200)
+        responses.add(responses.GET, f"{BASE_URL}api/v3/queries/99", json=query2, status=200)
+        client = ApiClient(BASE_URL, API_KEY)
+        result = client.get_workpackages_by_query_id(99)
+        assert len(result) == 15
+
+    @responses.activate
+    def test_get_workpackages_by_query_id_non_wpc_results(self):
+        """Query with non-WorkPackageCollection results envelope returns []."""
+        # A query whose _embedded.results is NOT a WorkPackageCollection
+        query = {
+            "_type": "Query",
+            "id": 99,
+            "name": "Test Query",
+            "filters": [],
+            "hidden": False,
+            "highlightingMode": "none",
+            "public": True,
+            "showHierarchies": False,
+            "starred": False,
+            "sums": False,
+            "timelineLabels": {},
+            "timelineVisible": False,
+            "timelineZoomLevel": "days",
+            "timestamps": [],
+            "createdAt": "2024-01-01T00:00:00+00:00",
+            "updatedAt": "2024-03-01T00:00:00+00:00",
+            "_links": {
+                "project": {"href": "/api/v3/projects/1", "title": "My Project"},
+                "user": {"href": "/api/v3/users/3", "title": "Alice Smith"},
+            },
+            "_embedded": {},
+        }
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/queries/99",
+            json=query,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        result = client.get_workpackages_by_query_id(99)
+        assert result == []
+
+
 # -- Project hierarchy (get_projects_dict) ---------------------------------
 
 class TestProjectHierarchy:

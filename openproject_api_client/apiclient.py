@@ -265,7 +265,9 @@ class ApiClient:
         """
         get all workpackages across all projects
 
-        :param status: one of 'all', 'open' (default), 'closed' ; overrides status_ids
+        :param status: one of 'all', 'open', 'closed' (case-insensitive). Unknown values are
+            ignored (no filter applied) and a debug log entry is emitted. If both `status` and
+            `status_ids` are provided, `status` takes precedence.
         :type status: str
         :param status_ids: list of status ids used to filter ; when using status must not be set
         :type status_ids: int
@@ -282,6 +284,8 @@ class ApiClient:
                 filters.append({"status_id": {"operator": "c", "values": None}})
             elif status.lower() == 'open':
                 filters.append({"status_id": {"operator": "o", "values": None}})
+            else:
+                logger.debug("Unknown status filter: %s (no filter applied)", status)
         else:
             if status_ids is not None:
                 filters.append({"status_id": {"operator": "=", "values": status_ids}})
@@ -314,6 +318,8 @@ class ApiClient:
                 filters.append({"status_id": {"operator": "c", "values": None}})
             elif status.lower() == 'open':
                 filters.append({"status_id": {"operator": "o", "values": None}})
+            else:
+                logger.debug("Unknown status filter: %s (no filter applied)", status)
         else:
             if status_ids is not None:
                 filters.append({"status_id": {"operator": "=", "values": status_ids}})
@@ -328,7 +334,7 @@ class ApiClient:
         """Fetch all work packages returned by a saved query."""
         workpackages = []
         page_size = 10
-        payload={'pageSize': page_size}
+        payload = {'pageSize': page_size}
         offset = 1
 
         while True:
@@ -338,7 +344,17 @@ class ApiClient:
                 collection = result.results
                 if isinstance(collection, res.WorkPackageCollection):
                     workpackages += list(result.results)
-                    if collection.total < collection.offset * collection.pagesize:
+
+                    # some collections do not deliver pagesize and offset
+                    effective_pagesize = page_size
+                    if collection.pagesize is not None:
+                        effective_pagesize = collection.pagesize
+
+                    effective_offset = offset
+                    if collection.offset is not None:
+                        effective_offset = collection.offset
+
+                    if collection.total < effective_offset * effective_pagesize:
                         break
                     offset += 1
                 else:
