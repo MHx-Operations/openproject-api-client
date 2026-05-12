@@ -29,6 +29,13 @@ The pagination termination condition now falls back to local `page_size` / `offs
 values when the API omits `pageSize` or `offset` from the `WorkPackageCollection`
 envelope, mirroring the existing `get_paged_collection` behavior.
 
+**`get_paged_collection` default `page_size` raised from 5 to 100 (PERF-02)**
+
+The default `page_size` argument of `get_paged_collection` has been increased from `5` to
+`100`, reducing the number of HTTP roundtrips by up to 20x for large collections. This change
+is non-breaking — callers that pass an explicit `page_size` argument are unaffected; only
+callers relying on the default benefit from the new value.
+
 ---
 
 ## Current State (v0.2.0)
