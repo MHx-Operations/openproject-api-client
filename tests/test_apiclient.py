@@ -1240,6 +1240,83 @@ class TestApiKeyPrivacy:
         assert c.auth.password == API_KEY
 
 
+# -- API key not in DEBUG logs (SEC-04) ------------------------------------
+
+class TestApiKeyNotInDebugLogs:
+    SECRET_KEY = "SUPERSECRETKEY-XYZ-12345"
+
+    @responses.activate
+    def test_no_key_in_get_debug(self, status_json, caplog):
+        import logging
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/statuses/1",
+            json=status_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, self.SECRET_KEY)
+        with caplog.at_level(logging.DEBUG, logger="openproject_api_client.apiclient"):
+            client.http_get("statuses/1")
+        assert len(caplog.records) > 0, "Expected at least one DEBUG record from the logger"
+        for r in caplog.records:
+            assert self.SECRET_KEY not in r.getMessage(), f"SECRET_KEY found in GET record: {r.getMessage()!r}"
+            assert self.SECRET_KEY not in str(r.args), f"SECRET_KEY found in GET record args: {r.args!r}"
+            assert "test-api-key" not in r.getMessage()  # belt + suspenders
+
+    @responses.activate
+    def test_no_key_in_post_debug(self, workpackage_json, caplog):
+        import logging
+        responses.add(
+            responses.POST,
+            f"{BASE_URL}api/v3/projects/1/work_packages",
+            json=workpackage_json,
+            status=201,
+        )
+        client = ApiClient(BASE_URL, self.SECRET_KEY)
+        with caplog.at_level(logging.DEBUG, logger="openproject_api_client.apiclient"):
+            client.http_post("projects/1/work_packages", {"subject": "Test"})
+        assert len(caplog.records) > 0, "Expected at least one DEBUG record from the logger"
+        for r in caplog.records:
+            assert self.SECRET_KEY not in r.getMessage(), f"SECRET_KEY found in POST record: {r.getMessage()!r}"
+            assert self.SECRET_KEY not in str(r.args), f"SECRET_KEY found in POST record args: {r.args!r}"
+            assert "test-api-key" not in r.getMessage()  # belt + suspenders
+
+    @responses.activate
+    def test_no_key_in_patch_debug(self, workpackage_json, caplog):
+        import logging
+        responses.add(
+            responses.PATCH,
+            f"{BASE_URL}api/v3/work_packages/42",
+            json=workpackage_json,
+            status=200,
+        )
+        client = ApiClient(BASE_URL, self.SECRET_KEY)
+        with caplog.at_level(logging.DEBUG, logger="openproject_api_client.apiclient"):
+            client.http_patch("work_packages/42", {"subject": "Updated"})
+        assert len(caplog.records) > 0, "Expected at least one DEBUG record from the logger"
+        for r in caplog.records:
+            assert self.SECRET_KEY not in r.getMessage(), f"SECRET_KEY found in PATCH record: {r.getMessage()!r}"
+            assert self.SECRET_KEY not in str(r.args), f"SECRET_KEY found in PATCH record args: {r.args!r}"
+            assert "test-api-key" not in r.getMessage()  # belt + suspenders
+
+    @responses.activate
+    def test_no_key_in_delete_debug(self, caplog):
+        import logging
+        responses.add(
+            responses.DELETE,
+            f"{BASE_URL}api/v3/work_packages/42",
+            status=204,
+        )
+        client = ApiClient(BASE_URL, self.SECRET_KEY)
+        with caplog.at_level(logging.DEBUG, logger="openproject_api_client.apiclient"):
+            client.http_delete("work_packages/42")
+        assert len(caplog.records) > 0, "Expected at least one DEBUG record from the logger"
+        for r in caplog.records:
+            assert self.SECRET_KEY not in r.getMessage(), f"SECRET_KEY found in DELETE record: {r.getMessage()!r}"
+            assert self.SECRET_KEY not in str(r.args), f"SECRET_KEY found in DELETE record args: {r.args!r}"
+            assert "test-api-key" not in r.getMessage()  # belt + suspenders
+
+
 # -- Time entry write methods -----------------------------------------------
 
 class TestTimeEntryWrite:
