@@ -2,6 +2,7 @@
 
 import inspect
 import json
+from unittest.mock import MagicMock, patch
 
 import pytest
 import responses
@@ -101,6 +102,62 @@ class TestApiClientSecurityKwargs:
         params = inspect.signature(ApiClient.__init__).parameters
         assert params["verify_ssl"].kind.name == "KEYWORD_ONLY"
         assert params["verify_ssl"].default is True
+
+
+# -- Security kwargs propagation (SEC-01, SEC-02) --------------------------
+
+class TestSecurityKwargsPropagation:
+    def _mock_response(self):
+        m = MagicMock()
+        m.status_code = 200
+        return m
+
+    def test_http_get_default_propagates_none_and_true(self):
+        client = ApiClient(BASE_URL, API_KEY)
+        with patch("openproject_api_client.apiclient.requests.get", return_value=self._mock_response()) as mocked:
+            client.http_get("foo")
+            _, kwargs = mocked.call_args
+            assert kwargs["timeout"] is None
+            assert kwargs["verify"] is True
+
+    def test_http_get_custom_propagates(self):
+        client = ApiClient(BASE_URL, API_KEY, timeout=15, verify_ssl=False)
+        with patch("openproject_api_client.apiclient.requests.get", return_value=self._mock_response()) as mocked:
+            client.http_get("foo")
+            _, kwargs = mocked.call_args
+            assert kwargs["timeout"] == 15
+            assert kwargs["verify"] is False
+
+    def test_http_post_propagates(self):
+        client = ApiClient(BASE_URL, API_KEY, timeout=10, verify_ssl=False)
+        with patch("openproject_api_client.apiclient.requests.post", return_value=self._mock_response()) as mocked:
+            client.http_post("foo", {"k": "v"})
+            _, kwargs = mocked.call_args
+            assert kwargs["timeout"] == 10
+            assert kwargs["verify"] is False
+
+    def test_http_patch_propagates(self):
+        client = ApiClient(BASE_URL, API_KEY, timeout=5, verify_ssl=False)
+        with patch("openproject_api_client.apiclient.requests.patch", return_value=self._mock_response()) as mocked:
+            client.http_patch("foo", {"k": "v"})
+            _, kwargs = mocked.call_args
+            assert kwargs["timeout"] == 5
+            assert kwargs["verify"] is False
+
+    def test_http_delete_propagates(self):
+        client = ApiClient(BASE_URL, API_KEY, timeout=7, verify_ssl=False)
+        with patch("openproject_api_client.apiclient.requests.delete", return_value=self._mock_response()) as mocked:
+            client.http_delete("foo")
+            _, kwargs = mocked.call_args
+            assert kwargs["timeout"] == 7
+            assert kwargs["verify"] is False
+
+    def test_ca_bundle_path_propagates(self):
+        client = ApiClient(BASE_URL, API_KEY, verify_ssl="/etc/ssl/ca.pem")
+        with patch("openproject_api_client.apiclient.requests.get", return_value=self._mock_response()) as mocked:
+            client.http_get("foo")
+            _, kwargs = mocked.call_args
+            assert kwargs["verify"] == "/etc/ssl/ca.pem"
 
 
 # -- decode / decode_response ----------------------------------------------
