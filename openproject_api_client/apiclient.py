@@ -44,13 +44,21 @@ class ApiClient:
 
         self._rootpath = 'api/v3'
         self.base_url = base_url
-        self.apikey = apikey
-        self.auth = HTTPBasicAuth('apikey', apikey)
+        self._apikey = apikey
+        self.auth = HTTPBasicAuth('apikey', self._apikey)
         self._timeout = timeout
         self._verify_ssl = verify_ssl
 
         if not self.base_url.endswith('/'):
             self.base_url += '/'
+
+    @property
+    def apikey(self):
+        """Read-only backwards-compatible accessor for the API key."""
+        return self._apikey
+
+    def __repr__(self):
+        return f"ApiClient(base_url={self.base_url!r}, apikey='***')"
 
     def _endpoint(self, resource):
         """Build the full API endpoint URL for a resource path."""
