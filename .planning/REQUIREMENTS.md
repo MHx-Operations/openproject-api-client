@@ -22,7 +22,7 @@ Requirements for the hardening milestone. All changes must be non-breaking with 
 
 ### Latent Bugs (BUG)
 
-- [ ] **BUG-01**: `Collection._items` defaults to `[]` (not `None`). Iterating an empty `Collection` is safe (`for x in collection: ...` raises nothing).
+- [x] **BUG-01**: `Collection._items` defaults to `[]` (not `None`). Iterating an empty `Collection` is safe (`for x in collection: ...` raises nothing).
 - [ ] **BUG-02**: Resource-class href parsing tolerates `None`, empty strings, and URN-style hrefs (e.g. `urn:openproject:work_packages:42`). When an ID cannot be parsed, the relevant `*_id` attribute is `None`, never a `ValueError`.
 - [ ] **BUG-03**: `Query.__init__` no longer forces `debug=True` to its base constructor. Callers may opt in to `debug=True` explicitly. CLI `json_out` no longer emits raw `_links`/`_embedded` blobs for queries by default.
 - [ ] **BUG-04**: `get_workpackages(status=...)` (and analogues) have well-defined behavior for unknown `status` strings — either a documented passthrough or a `ValueError`. Behavior is covered by a test.
@@ -79,7 +79,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| BUG-01 | Phase 1 | Pending |
+| BUG-01 | Phase 1 | Complete |
 | BUG-02 | Phase 1 | Pending |
 | BUG-03 | Phase 1 | Pending |
 | BUG-04 | Phase 1 | Pending |
