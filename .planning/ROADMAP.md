@@ -72,7 +72,7 @@ Plans:
   1. New tests cover: `Collection` without `_embedded`, URN/empty/None hrefs, unknown `_type`, `pageSize: null`, unknown `status=`, no API-key substring in DEBUG logs, `Session` reuse, and `timeout`/`verify_ssl` propagation.
   2. All new tests pass on the Python 3.9 – 3.13 CI matrix.
   3. CI is green on `main` after merge.
-**Plans**: TBD
+**Plans**: 1 plan
 
 Plans:
-- [ ] 04-01: TBD
+- [ ] 04-01-PLAN.md — TEST-01..08 audit-first traceability + targeted gap fill
