@@ -75,4 +75,4 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 04-01-PLAN.md — TEST-01..08 audit-first traceability + targeted gap fill
+- [x] 04-01-PLAN.md — TEST-01..08 audit-first traceability + targeted gap fill

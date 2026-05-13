@@ -30,14 +30,14 @@ Requirements for the hardening milestone. All changes must be non-breaking with 
 
 ### Test Coverage (TEST)
 
-- [ ] **TEST-01**: Test for `Collection` constructed from a response missing `_embedded.elements` — iterates safely (covers BUG-01).
-- [ ] **TEST-02**: Test for resource href parsing with `None`, empty, and URN-style hrefs (covers BUG-02).
-- [ ] **TEST-03**: Test for unknown `_type` strings in `decode` — well-defined fallback behavior.
-- [ ] **TEST-04**: Test for `pageSize: null` in a paged response — pagination loop terminates correctly.
-- [ ] **TEST-05**: Test for unknown `status=` strings in `get_workpackages` (covers BUG-04).
-- [ ] **TEST-06**: Test asserting no API-key substring appears in DEBUG log output (covers SEC-04).
-- [ ] **TEST-07**: Test asserting `Session` reuse across two sequential calls (covers PERF-01).
-- [ ] **TEST-08**: Test asserting `timeout` and `verify` kwargs are propagated to `requests` (covers SEC-01, SEC-02).
+- [x] **TEST-01**: Test for `Collection` constructed from a response missing `_embedded.elements` — iterates safely (covers BUG-01).
+- [x] **TEST-02**: Test for resource href parsing with `None`, empty, and URN-style hrefs (covers BUG-02).
+- [x] **TEST-03**: Test for unknown `_type` strings in `decode` — well-defined fallback behavior.
+- [x] **TEST-04**: Test for `pageSize: null` in a paged response — pagination loop terminates correctly.
+- [x] **TEST-05**: Test for unknown `status=` strings in `get_workpackages` (covers BUG-04).
+- [x] **TEST-06**: Test asserting no API-key substring appears in DEBUG log output (covers SEC-04).
+- [x] **TEST-07**: Test asserting `Session` reuse across two sequential calls (covers PERF-01).
+- [x] **TEST-08**: Test asserting `timeout` and `verify` kwargs are propagated to `requests` (covers SEC-01, SEC-02).
 
 ## v0.4+ Requirements
 
@@ -91,14 +91,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-01 | Phase 3 | Complete |
 | PERF-02 | Phase 3 | Pending |
 | PERF-03 | Phase 3 | Complete |
-| TEST-01 | Phase 4 | Pending |
-| TEST-02 | Phase 4 | Pending |
-| TEST-03 | Phase 4 | Pending |
-| TEST-04 | Phase 4 | Pending |
-| TEST-05 | Phase 4 | Pending |
-| TEST-06 | Phase 4 | Pending |
-| TEST-07 | Phase 4 | Pending |
-| TEST-08 | Phase 4 | Pending |
+| TEST-01 | Phase 4 | Complete |
+| TEST-02 | Phase 4 | Complete |
+| TEST-03 | Phase 4 | Complete |
+| TEST-04 | Phase 4 | Complete |
+| TEST-05 | Phase 4 | Complete |
+| TEST-06 | Phase 4 | Complete |
+| TEST-07 | Phase 4 | Complete |
+| TEST-08 | Phase 4 | Complete |
 
 **Coverage:**
 - v0.3 requirements: 20 total
