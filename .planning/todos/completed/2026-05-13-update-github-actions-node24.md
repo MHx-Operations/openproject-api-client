@@ -1,10 +1,12 @@
 ---
 created: 2026-05-13T07:05:39.526Z
+completed: 2026-05-13
 title: Update GitHub Actions to Node.js 24 compatible versions
 area: tooling
 files:
   - .github/workflows/ci.yml:17,20
   - .github/workflows/publish.yml:16,19,34,37,65,84
+resolution: Merged in commit c5afbae (checkout v6, setup-python v6, upload-artifact v7, download-artifact v8)
 ---
 
 ## Problem
