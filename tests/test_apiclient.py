@@ -326,6 +326,65 @@ class TestGet:
         assert result is None
 
 
+class TestGetErrorStatuses:
+    """A failed GET must raise, not masquerade as an empty result.
+
+    Regression guard for the 2026-08-19 production incident: `get()` used to test
+    `if response:` and requests.Response is falsy for any status >= 400, so a 401
+    became None. Collection mirrors read that as "upstream is empty" and deleted
+    every local row.
+    """
+
+    @responses.activate
+    def test_get_raises_on_401(self):
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/users",
+            json={"_type": "Error", "message": "You need to be authenticated."},
+            status=401,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        with pytest.raises(RequestError, match="401"):
+            client.get("users")
+
+    @responses.activate
+    def test_get_raises_on_403(self):
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/users",
+            json={"_type": "Error", "message": "forbidden"},
+            status=403,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        with pytest.raises(RequestError):
+            client.get("users")
+
+    @responses.activate
+    def test_get_raises_on_500(self):
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/users",
+            body="boom",
+            status=500,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        with pytest.raises(RequestError):
+            client.get("users")
+
+    @responses.activate
+    def test_paged_collection_raises_on_401_instead_of_returning_empty(self):
+        """The exact incident shape: 401 on the first page must not yield []."""
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}api/v3/projects",
+            json={"_type": "Error", "message": "You need to be authenticated."},
+            status=401,
+        )
+        client = ApiClient(BASE_URL, API_KEY)
+        with pytest.raises(RequestError, match="401"):
+            client.get_paged_collection("projects")
+
+
 # -- get_paged_collection --------------------------------------------------
 
 class TestGetPagedCollection:

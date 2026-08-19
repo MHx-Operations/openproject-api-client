@@ -131,13 +131,26 @@ class ApiClient:
         return resp
 
     def get(self, resource, payload=None):
-        """GET a resource and decode the response."""
+        """GET a resource and decode the response.
+
+        Raises RequestError on HTTP 4xx/5xx, except 404 which returns None so
+        callers can keep treating "not found" as an absent single item.
+
+        NOTE: do NOT go back to testing `if response:` here. A requests.Response
+        is falsy for ANY status >= 400, so a 401/403/5xx was swallowed and
+        returned as None — indistinguishable from an empty result. Callers that
+        mirror remote collections read that as "the remote side is empty" and
+        delete their local copies. See get_paged_collection().
+        """
         response = self.http_get(resource, payload)
 
-        if response:
-            return self.decode_response(response)
-        else:
+        if response.status_code == 404:
             return None
+        if response.status_code >= 400:
+            raise RequestError(
+                f"GET {resource} failed ({response.status_code}): {response.text}"
+            )
+        return self.decode_response(response)
 
     def post(self, resource, body):
         """POST a resource and decode the response.
